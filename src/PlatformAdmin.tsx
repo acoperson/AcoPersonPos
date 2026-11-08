@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, Building2, CalendarDays, ChevronRight, CreditCard, LayoutDashboard, LogOut, Menu, RefreshCw, ShieldCheck, Store, Users, Wallet } from "lucide-react";
+import { Activity, Building2, CalendarDays, CheckCircle2, ChevronRight, CreditCard, LayoutDashboard, LogOut, Menu, RefreshCw, ShieldCheck, Store, Users, Wallet, XCircle } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import { Workspace } from "./Workspace";
@@ -8,13 +8,15 @@ import "./platform-admin.css";
 type Organization = { id:string; name:string; slug:string|null; owner_email:string|null; created_at:string; store_count:number; member_count:number; plan_name:string|null; subscription_status:string|null };
 type PlatformUser = { id:string; email:string|null; full_name:string|null; created_at:string; last_sign_in_at:string|null };
 type Subscription = { organization_id:string; organization_name:string; owner_email:string|null; plan_name:string; status:string; starts_at:string; ends_at:string|null };
+type BusinessApplication = { id:string; user_id:string; owner_email:string|null; application_type:"new_business"|"upgrade"; organization_id:string|null; business_name:string; store_name:string|null; requested_plan:string; status:string; applicant_note:string|null; admin_note:string|null; created_at:string };
 type Overview = {
- stats:{organizations:number;stores:number;users:number;sales:number;qr_orders:number;subscriptions:number;active_subscriptions:number};
+ stats:{organizations:number;stores:number;users:number;sales:number;qr_orders:number;subscriptions:number;active_subscriptions:number;pending_applications:number};
  organizations:Organization[];
  users:PlatformUser[];
  subscriptions:Subscription[];
+ applications:BusinessApplication[];
 };
-type Page = "overview"|"organizations"|"users"|"subscriptions";
+type Page = "overview"|"organizations"|"users"|"subscriptions"|"applications";
 const number=(value:number)=>new Intl.NumberFormat("id-ID").format(Number(value||0));
 const date=(value:string|null)=>value?new Date(value).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}):"—";
 
@@ -28,6 +30,13 @@ export function PlatformAdmin({user,onLogout}:{user:User;onLogout:()=>void}) {
   if(requestError)setError(requestError.message);else setOverview(data as Overview);
   setLoading(false);
  },[]);
+ const reviewApplication=async(application:BusinessApplication,approved:boolean)=>{
+  if(!supabase)return;
+  const note=window.prompt(approved?"Catatan persetujuan (opsional):":"Alasan penolakan (opsional):")||null;
+  const {error}=await supabase.rpc("review_business_application",{p_application_id:application.id,p_approved:approved,p_admin_note:note});
+  if(error){setError(error.message);return;}
+  await refresh();
+ };
  useEffect(()=>{void refresh()},[refresh]);
  const organizations=useMemo(()=>{
   const rows=overview?.organizations??[],term=query.trim().toLowerCase();
@@ -43,7 +52,7 @@ export function PlatformAdmin({user,onLogout}:{user:User;onLogout:()=>void}) {
  },[overview,query]);
  if(businessWorkspace)return <Workspace user={user} onLogout={onLogout} onBackToPlatform={()=>setBusinessWorkspace(false)}/>;
  const stats=overview?.stats;
- const pageTitle:Record<Page,string>={overview:"Platform overview",organizations:"Bisnis & organisasi",users:"Pengguna platform",subscriptions:"Langganan"};
+ const pageTitle:Record<Page,string>={overview:"Platform overview",organizations:"Bisnis & organisasi",users:"Pengguna platform",subscriptions:"Langganan",applications:"Pengajuan paket"};
  return <div className="app-shell platform-shell">
   <aside className={mobile?"sidebar open":"sidebar"}>
    <div className="brand-lockup"><span className="brand-mark">A</span><span><b>ACOPOS</b><small>PLATFORM CONTROL</small></span></div>
@@ -53,6 +62,7 @@ export function PlatformAdmin({user,onLogout}:{user:User;onLogout:()=>void}) {
     <NavButton active={page==="organizations"} onClick={()=>{setPage("organizations");setMobile(false)}} icon={Building2}>Bisnis & organisasi</NavButton>
     <NavButton active={page==="users"} onClick={()=>{setPage("users");setMobile(false)}} icon={Users}>Pengguna platform</NavButton>
     <NavButton active={page==="subscriptions"} onClick={()=>{setPage("subscriptions");setMobile(false)}} icon={CreditCard}>Langganan</NavButton>
+    <NavButton active={page==="applications"} onClick={()=>{setPage("applications");setMobile(false)}} icon={CheckCircle2}>Pengajuan paket</NavButton>
    </nav>
    <div className="sidebar-bottom"><div className="platform-account"><span className="platform-avatar">{(user.email||"A").slice(0,1).toUpperCase()}</span><span><b>{user.email}</b><small>Platform Owner</small></span></div><button className="nav-item" onClick={()=>setBusinessWorkspace(true)}><Store size={16}/>Workspace bisnis <ChevronRight size={14}/></button><button className="nav-item" onClick={onLogout}><LogOut size={16}/>Keluar</button></div>
   </aside>
@@ -78,6 +88,7 @@ export function PlatformAdmin({user,onLogout}:{user:User;onLogout:()=>void}) {
      {page==="organizations"&&<div className="panel platform-recent"><div className="panel-head"><div><h2>Seluruh bisnis ACOPOS</h2><p>Daftar organisasi, pemilik, cabang, anggota, dan paket.</p></div><span className="platform-count">{number(organizations.length)} bisnis</span></div><SearchBox query={query} setQuery={setQuery} placeholder="Cari nama bisnis, email owner, atau paket…"/><OrganizationTable rows={organizations}/></div>}
      {page==="users"&&<div className="panel platform-recent"><div className="panel-head"><div><h2>Pengguna terdaftar</h2><p>Daftar akun yang sudah dibuat pada ACOPOS (maksimal 100 akun terbaru).</p></div><span className="platform-count">{number(users.length)} akun</span></div><SearchBox query={query} setQuery={setQuery} placeholder="Cari nama atau email pengguna…"/><UserTable rows={users}/></div>}
      {page==="subscriptions"&&<div className="panel platform-recent"><div className="panel-head"><div><h2>Langganan bisnis</h2><p>Paket dan status langganan setiap organisasi.</p></div><span className="platform-count">{number(subscriptions.length)} langganan</span></div><SearchBox query={query} setQuery={setQuery} placeholder="Cari bisnis, pemilik, paket, atau status…"/><SubscriptionTable rows={subscriptions}/></div>}
+     {page==="applications"&&<div className="panel platform-recent"><div className="panel-head"><div><h2>Pengajuan paket</h2><p>Setujui pendaftaran Paket Bisnis atau upgrade dari Paket Gratis.</p></div><span className="platform-count">{number((overview?.applications||[]).filter(a=>a.status==="pending").length)} menunggu</span></div><div className="table-wrap"><table><thead><tr><th>Bisnis</th><th>Pemohon</th><th>Jenis</th><th>Paket</th><th>Catatan</th><th>Diajukan</th><th>Tindakan</th></tr></thead><tbody>{(overview?.applications||[]).filter(a=>a.status==="pending").map(a=><tr key={a.id}><td><b>{a.business_name}</b><small className="platform-slug">{a.store_name||"Upgrade bisnis"}</small></td><td>{a.owner_email||"—"}</td><td>{a.application_type==="upgrade"?"Upgrade paket":"Bisnis baru"}</td><td>{a.requested_plan}</td><td>{a.applicant_note||"—"}</td><td>{date(a.created_at)}</td><td><div className="application-actions"><button className="ui-btn primary" onClick={()=>void reviewApplication(a,true)}><CheckCircle2 size={14}/> Setujui</button><button className="ui-btn ghost" onClick={()=>void reviewApplication(a,false)}><XCircle size={14}/> Tolak</button></div></td></tr>)}</tbody></table></div>{!(overview?.applications||[]).some(a=>a.status==="pending")&&<div className="empty-state"><CheckCircle2 size={25}/><span>Tidak ada pengajuan yang menunggu persetujuan.</span></div>}</div>}
     </>}
     <div className="platform-footnote"><CalendarDays size={14}/> Data diperbarui saat halaman dimuat atau tombol refresh digunakan.</div>
    </section>
