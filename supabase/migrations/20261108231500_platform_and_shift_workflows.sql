@@ -228,7 +228,7 @@ declare
   v_item record;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
-  if p_status not in ('preparing','ready','completed','cancelled') then
+  if p_status is null or p_status not in ('preparing','ready','completed','cancelled') then
     raise exception 'Status pesanan tidak valid';
   end if;
 
