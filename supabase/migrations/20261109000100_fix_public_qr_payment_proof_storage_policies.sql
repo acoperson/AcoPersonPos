@@ -110,3 +110,12 @@ create unique index if not exists shifts_one_open_per_cashier_store_idx
 create unique index if not exists attendance_one_open_per_employee_store_idx
   on public.attendance(store_id,employee_user_id)
   where clock_out is null;
+
+-- Enforce one pending application per user/business to close concurrent-submit races.
+create unique index if not exists business_applications_one_pending_new_business_per_user_idx
+  on public.business_applications(user_id)
+  where application_type = 'new_business' and status = 'pending';
+
+create unique index if not exists business_applications_one_pending_upgrade_per_org_idx
+  on public.business_applications(organization_id)
+  where application_type = 'upgrade' and status = 'pending';
