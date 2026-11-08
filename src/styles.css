@@ -27,7 +27,7 @@
 
 /* ACOPOS motion language: liquid chrome, restrained depth, and scroll reveals. */
 .hero-art{isolation:isolate}
-.hero-glow{position:absolute;inset:8% 4%;z-index:0;border-radius:50%;background:radial-gradient(ellipse,rgba(196,205,214,.13),transparent 66%);filter:blur(24px);animation:glow-breathe 8s ease-in-out infinite}
+.hero-glow{position:absolute;inset:8% 4%;z-index:0;pointer-events:none;border-radius:50%;background:radial-gradient(ellipse,rgba(196,205,214,.13),transparent 66%);filter:blur(24px);animation:glow-breathe 8s ease-in-out infinite}
 .silver-core{animation:silver-float 7s ease-in-out infinite}
 .silver-core:before{content:"";position:absolute;inset:1px;z-index:1;border-radius:50%;pointer-events:none;background:linear-gradient(112deg,transparent 18%,rgba(255,255,255,.05) 35%,rgba(255,255,255,.58) 49%,rgba(255,255,255,.08) 61%,transparent 78%);background-size:220% 100%;mix-blend-mode:screen;animation:liquid-sweep 6.5s ease-in-out infinite}
 .silver-core span,.silver-core small{position:relative;z-index:2}
