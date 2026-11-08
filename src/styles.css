@@ -15,3 +15,9 @@
 .foundations-grid p{font-size:9px;line-height:1.85;color:#929aa2;margin:0}
 @media(max-width:900px){.foundations-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.foundations-heading{display:block}.foundations-heading p{margin-top:20px}}
 @media(max-width:600px){.foundations-section{padding-top:75px;padding-bottom:80px}.foundations-grid{grid-template-columns:1fr 1fr;gap:8px}.foundations-grid article{padding:16px;min-height:245px}.foundations-grid h3{font-size:14px}.foundations-grid p{font-size:9px}.foundations-grid article>svg{margin:30px 0 16px}.foundations-heading h2{font-size:40px}}
+
+.auth-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#899097;font-size:8px;letter-spacing:.18em}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;flex:1;background:#d4d7d8}
+.otp-alt-btn{width:100%;display:flex;align-items:center;justify-content:center;padding:13px 14px;border:1px solid #bfc4c7;border-radius:4px;background:transparent;color:#30363b;font-size:10px;font-weight:700;cursor:pointer;transition:background .2s,border-color .2s}
+.otp-alt-btn:hover{background:#e3e5e5;border-color:#92999e}
+.login-card form .resend-btn{display:block;padding:5px 0;text-align:left}
