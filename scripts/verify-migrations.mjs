@@ -6,7 +6,7 @@ const approvals = read("../supabase/migrations/20261108165858_business_applicati
 const workflows = read("../supabase/migrations/20261108231500_platform_and_shift_workflows.sql");
 const hardening = read("../supabase/migrations/20261109000100_fix_public_qr_payment_proof_storage_policies.sql");
 
-assert.match(approvals, /p_requested_plan is null or p_requested_plan not in \('free','business'\)/);
+assert.match(hardening, /p_requested_plan is null or p_requested_plan not in \('free','business'\)/);
 assert.match(approvals, /values\(v_org,'free','active',now\(\),null\)/);
 assert.match(approvals, /if auth\.uid\(\) is null or not public\.is_platform_admin\(\) then raise exception 'Platform admin access required'/);
 assert.match(approvals, /application_type='upgrade' and status='pending'/);
