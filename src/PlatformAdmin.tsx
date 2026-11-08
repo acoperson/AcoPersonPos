@@ -19,6 +19,7 @@ type Overview = {
 type Page = "overview"|"organizations"|"users"|"subscriptions"|"applications";
 const number=(value:number)=>new Intl.NumberFormat("id-ID").format(Number(value||0));
 const date=(value:string|null)=>value?new Date(value).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}):"—";
+const planLabel=(value:string|null)=>value?.toLowerCase()==="free"?"Gratis":value?.toLowerCase()==="business"?"Bisnis":value||"—";
 
 export function PlatformAdmin({user,onLogout}:{user:User;onLogout:()=>void}) {
  const [overview,setOverview]=useState<Overview|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[query,setQuery]=useState("");
@@ -101,7 +102,7 @@ function SearchBox({query,setQuery,placeholder}:{query:string;setQuery:(value:st
 function Metric({label,value,icon:Icon}:{label:string;value:string;icon:typeof Building2}){return <div className="metric-card"><div className="metric-top"><span>{label}</span><Icon size={17}/></div><strong>{value}</strong><small>Seluruh platform ACOPOS</small></div>}
 function OrganizationTable({rows}:{rows:Organization[]}){
  if(!rows.length)return <div className="empty-state"><Building2 size={25}/><span>Belum ada bisnis yang terdaftar.</span></div>;
- return <div className="table-wrap"><table><thead><tr><th>Bisnis</th><th>Pemilik</th><th>Toko</th><th>Anggota</th><th>Paket</th><th>Status</th><th>Terdaftar</th></tr></thead><tbody>{rows.map(item=><tr key={item.id}><td><b>{item.name}</b><small className="platform-slug">{item.slug||item.id.slice(0,8)}</small></td><td>{item.owner_email||"—"}</td><td>{number(item.store_count)}</td><td>{number(item.member_count)}</td><td>{item.plan_name||"Starter"}</td><td><span className="status">{item.subscription_status||"Belum ada"}</span></td><td>{date(item.created_at)}</td></tr>)}</tbody></table></div>;
+ return <div className="table-wrap"><table><thead><tr><th>Bisnis</th><th>Pemilik</th><th>Toko</th><th>Anggota</th><th>Paket</th><th>Status</th><th>Terdaftar</th></tr></thead><tbody>{rows.map(item=><tr key={item.id}><td><b>{item.name}</b><small className="platform-slug">{item.slug||item.id.slice(0,8)}</small></td><td>{item.owner_email||"—"}</td><td>{number(item.store_count)}</td><td>{number(item.member_count)}</td><td>{planLabel(item.plan_name)}</td><td><span className="status">{item.subscription_status||"Belum ada"}</span></td><td>{date(item.created_at)}</td></tr>)}</tbody></table></div>;
 }
 function UserTable({rows}:{rows:PlatformUser[]}){
  if(!rows.length)return <div className="empty-state"><Users size={25}/><span>Belum ada pengguna.</span></div>;
@@ -109,5 +110,5 @@ function UserTable({rows}:{rows:PlatformUser[]}){
 }
 function SubscriptionTable({rows}:{rows:Subscription[]}){
  if(!rows.length)return <div className="empty-state"><CreditCard size={25}/><span>Belum ada langganan.</span></div>;
- return <div className="table-wrap"><table><thead><tr><th>Bisnis</th><th>Pemilik</th><th>Paket</th><th>Status</th><th>Mulai</th><th>Berakhir</th></tr></thead><tbody>{rows.map(item=><tr key={item.organization_id}><td><b>{item.organization_name}</b></td><td>{item.owner_email||"—"}</td><td>{item.plan_name}</td><td><span className="status">{item.status}</span></td><td>{date(item.starts_at)}</td><td>{date(item.ends_at)}</td></tr>)}</tbody></table></div>;
+ return <div className="table-wrap"><table><thead><tr><th>Bisnis</th><th>Pemilik</th><th>Paket</th><th>Status</th><th>Mulai</th><th>Berakhir</th></tr></thead><tbody>{rows.map(item=><tr key={item.organization_id}><td><b>{item.organization_name}</b></td><td>{item.owner_email||"—"}</td><td>{planLabel(item.plan_name)}</td><td><span className="status">{item.status}</span></td><td>{date(item.starts_at)}</td><td>{date(item.ends_at)}</td></tr>)}</tbody></table></div>;
 }
