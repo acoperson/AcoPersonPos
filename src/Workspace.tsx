@@ -94,7 +94,8 @@ export function Workspace({user,onLogout}:{user:User;onLogout:()=>void}) {
  const title=visibleNav.find(n=>n.id===page)?.label||"Ringkasan";
  const filteredProducts=products.filter(p=>(p.name+" "+(p.sku||"")).toLowerCase().includes(query.toLowerCase()));
  const totalToday=sales.filter(s=>s.created_at?.slice(0,10)===today()).reduce((a,s)=>a+Number(s.total),0);
- const openOrders=orders.filter(o=>!["completed","cancelled"].includes(o.status)).length;\n const activeAttendance=attendance.find(a=>a.employee_user_id===user.id&&!a.clock_out);
+ const openOrders=orders.filter(o=>!["completed","cancelled"].includes(o.status)).length;
+ const activeAttendance=attendance.find(a=>a.employee_user_id===user.id&&!a.clock_out);
  const cartTotal=cart.reduce((a,x)=>a+x.product.selling_price*x.quantity,0);
  const subtotal=Math.max(0,cartTotal-discount);
 
