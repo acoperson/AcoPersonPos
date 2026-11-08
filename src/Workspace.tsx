@@ -37,7 +37,12 @@ const money=(v:number)=>new Intl.NumberFormat("id-ID",{style:"currency",currency
 const date=(v:string)=>new Date(v).toLocaleString("id-ID",{dateStyle:"medium",timeStyle:"short"});
 const dateKey=(value:string|Date=new Date())=>{const d=new Date(value);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
 const today=()=>dateKey();
-const validateImageFile=(file:File|null)=>!file?null:!(["image/jpeg","image/png","image/webp"].includes(file.type)?null:"Gunakan gambar JPG, PNG, atau WebP.")||file.size>5*1024*1024?"Ukuran gambar maksimal 5 MB.":null;
+const validateImageFile=(file:File|null):string|null=>{
+ if(!file)return null;
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type))return "Gunakan gambar JPG, PNG, atau WebP.";
+ if(file.size>5*1024*1024)return "Ukuran gambar maksimal 5 MB.";
+ return null;
+};
 function Button({children,onClick,type="button",variant="primary",disabled=false}: {children:ReactNode;onClick?:()=>void;type?:"button"|"submit";variant?:"primary"|"ghost"|"danger";disabled?:boolean}) {
  return <button type={type} onClick={onClick} disabled={disabled} className={"ui-btn "+variant}>{children}</button>;
 }
