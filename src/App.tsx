@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, CalendarClock, ChartNoAxesCombined, ChevronDown, LayoutDashboard, LogOut, Menu, Package, QrCode, Settings, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
 import type { FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
-import { isSupabaseConfigured, supabase } from "./lib/supabase";\nimport { Workspace, QROrderPage } from "./Workspace";\nimport "./workspace.css";
+import { isSupabaseConfigured, supabase } from "./lib/supabase";
+import { Workspace, QROrderPage } from "./Workspace";
+import "./workspace.css";
 
 type Role = "owner" | "admin" | "manager" | "cashier" | "employee";
 type Profile = { full_name: string | null; active_organization_id: string | null };
@@ -78,7 +80,9 @@ function App() {
   }
   async function logout(){await supabase?.auth.signOut();setPage("overview");}
   if(authLoading) return <div className="boot"><div className="brand-mark">A</div><span>Menyiapkan ACOPOS…</span></div>;
-  if(user) return <Workspace user={user} onLogout={logout}/>;\n  if(window.location.pathname.startsWith("/order/")) return <QROrderPage slug={window.location.pathname.split("/")[2]||""}/>;\n  return <div className="site">
+  if(user) return <Workspace user={user} onLogout={logout}/>;
+  if(window.location.pathname.startsWith("/order/")) return <QROrderPage slug={window.location.pathname.split("/")[2]||""}/>;
+  return <div className="site">
     <header className="site-nav"><a className="brand-lockup" href="#"><span className="brand-mark">A</span><span><b>ACOPOS</b><small>BUSINESS OS</small></span></a><nav className="public-links"><a href="#ecosystem">Ekosistem</a><a href="#features">Fitur</a><a href="#pricing">Paket</a></nav><button className="nav-cta" onClick={()=>{document.getElementById("login")?.scrollIntoView({behavior:"smooth"})}}>Masuk workspace <ArrowUpRight size={14}/></button></header>
     <main>
       <section className="hero">
