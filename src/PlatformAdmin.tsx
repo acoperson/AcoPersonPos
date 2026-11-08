@@ -52,7 +52,7 @@ export function PlatformAdmin({ user, onLogout }: { user: User; onLogout: () => 
     return rows.filter((item) => [item.name, item.owner_email ?? "", item.slug ?? "", item.plan_name ?? ""].join(" ").toLowerCase().includes(term));
   }, [overview, query]);
 
-  if (businessWorkspace) return <Workspace user={user} onLogout={onLogout} />;
+  if (businessWorkspace) return <Workspace user={user} onLogout={onLogout} onBackToPlatform={() => setBusinessWorkspace(false)} />;
 
   const stats = overview?.stats;
   return (
