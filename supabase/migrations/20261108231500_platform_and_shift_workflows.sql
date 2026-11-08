@@ -163,3 +163,128 @@ grant execute on function public.open_cashier_shift(uuid,numeric) to authenticat
 revoke all on function public.close_cashier_shift(uuid,numeric) from public;
 revoke all on function public.close_cashier_shift(uuid,numeric) from anon;
 grant execute on function public.close_cashier_shift(uuid,numeric) to authenticated;
+
+
+create or replace function public.review_qr_payment(p_order_id uuid, p_approved boolean)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_order public.qr_orders%rowtype;
+  v_confirmation_id uuid;
+  v_next_status text;
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  select * into v_order from public.qr_orders where id = p_order_id for update;
+  if not found then raise exception 'Pesanan tidak ditemukan'; end if;
+  if v_order.status <> 'awaiting_payment_confirmation' then
+    raise exception 'Pesanan tidak sedang menunggu konfirmasi pembayaran';
+  end if;
+  if not private.can_access_store(v_order.store_id)
+     or not private.has_org_role(v_order.organization_id, array['owner','admin','manager','cashier']) then
+    raise exception 'Akses konfirmasi pembayaran ditolak';
+  end if;
+
+  select pc.id into v_confirmation_id
+  from public.payment_confirmations pc
+  where pc.order_id = p_order_id
+  order by pc.created_at desc
+  limit 1
+  for update;
+
+  v_next_status := case when p_approved then 'approved' else 'rejected' end;
+  if v_confirmation_id is null then
+    insert into public.payment_confirmations(
+      organization_id, store_id, order_id, status, reviewed_by, reviewed_at
+    ) values (
+      v_order.organization_id, v_order.store_id, v_order.id,
+      v_next_status, auth.uid(), now()
+    );
+  else
+    update public.payment_confirmations
+    set status = v_next_status, reviewed_by = auth.uid(), reviewed_at = now()
+    where id = v_confirmation_id;
+  end if;
+
+  if p_approved then
+    update public.qr_orders set status = 'payment_confirmed' where id = p_order_id;
+  end if;
+
+  return jsonb_build_object('order_id', p_order_id, 'payment_status', v_next_status,
+    'order_status', case when p_approved then 'payment_confirmed' else 'awaiting_payment_confirmation' end);
+end;
+$function$;
+
+create or replace function public.update_qr_order_status(p_order_id uuid, p_status text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_order public.qr_orders%rowtype;
+  v_item record;
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if p_status not in ('preparing','ready','completed','cancelled') then
+    raise exception 'Status pesanan tidak valid';
+  end if;
+
+  select * into v_order from public.qr_orders where id = p_order_id for update;
+  if not found then raise exception 'Pesanan tidak ditemukan'; end if;
+  if not private.can_access_store(v_order.store_id)
+     or not private.has_org_role(v_order.organization_id, array['owner','admin','manager','cashier']) then
+    raise exception 'Akses pesanan ditolak';
+  end if;
+
+  if p_status = 'preparing' and v_order.status <> 'payment_confirmed' then
+    raise exception 'Pembayaran harus dikonfirmasi sebelum pesanan diproses';
+  elsif p_status = 'ready' and v_order.status <> 'preparing' then
+    raise exception 'Pesanan harus diproses sebelum ditandai siap';
+  elsif p_status = 'completed' and v_order.status <> 'ready' then
+    raise exception 'Pesanan harus siap sebelum diselesaikan';
+  elsif p_status = 'cancelled' and v_order.status in ('completed','cancelled') then
+    raise exception 'Pesanan yang sudah selesai atau dibatalkan tidak dapat dibatalkan lagi';
+  end if;
+
+  if p_status = 'cancelled' then
+    for v_item in
+      select qi.product_id, sum(qi.quantity) as quantity
+      from public.qr_order_items qi
+      where qi.order_id = p_order_id and qi.product_id is not null
+      group by qi.product_id
+    loop
+      insert into public.store_inventory(
+        organization_id, store_id, product_id, quantity, low_stock_threshold
+      )
+      select v_order.organization_id, v_order.store_id, v_item.product_id,
+             v_item.quantity, coalesce(p.low_stock_threshold,0)
+      from public.products p
+      where p.id = v_item.product_id
+      on conflict (store_id, product_id)
+      do update set quantity = public.store_inventory.quantity + excluded.quantity,
+                    updated_at = now();
+
+      insert into public.inventory_movements(
+        organization_id, store_id, product_id, movement_type, quantity, note, created_by
+      ) values (
+        v_order.organization_id, v_order.store_id, v_item.product_id, 'in',
+        v_item.quantity, 'Restock pembatalan pesanan QR ' || v_order.order_number, auth.uid()
+      );
+    end loop;
+  end if;
+
+  update public.qr_orders set status = p_status where id = p_order_id;
+  return jsonb_build_object('order_id', p_order_id, 'status', p_status);
+end;
+$function$;
+
+revoke all on function public.review_qr_payment(uuid,boolean) from public;
+revoke all on function public.review_qr_payment(uuid,boolean) from anon;
+grant execute on function public.review_qr_payment(uuid,boolean) to authenticated;
+
+revoke all on function public.update_qr_order_status(uuid,text) from public;
+revoke all on function public.update_qr_order_status(uuid,text) from anon;
+grant execute on function public.update_qr_order_status(uuid,text) to authenticated;
