@@ -80,8 +80,8 @@ function App() {
   }
   async function logout(){await supabase?.auth.signOut();setPage("overview");}
   if(authLoading) return <div className="boot"><div className="brand-mark">A</div><span>Menyiapkan ACOPOS…</span></div>;
-  if(user) return <Workspace user={user} onLogout={logout}/>;
   if(window.location.pathname.startsWith("/order/")) return <QROrderPage slug={window.location.pathname.split("/")[2]||""}/>;
+  if(user) return <Workspace user={user} onLogout={logout}/>;
   return <div className="site">
     <header className="site-nav"><a className="brand-lockup" href="#"><span className="brand-mark">A</span><span><b>ACOPOS</b><small>BUSINESS OS</small></span></a><nav className="public-links"><a href="#ecosystem">Ekosistem</a><a href="#features">Fitur</a><a href="#pricing">Paket</a></nav><button className="nav-cta" onClick={()=>{document.getElementById("login")?.scrollIntoView({behavior:"smooth"})}}>Masuk workspace <ArrowUpRight size={14}/></button></header>
     <main>
