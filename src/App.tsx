@@ -26,7 +26,10 @@ function App() {
   const [busy,setBusy] = useState(false);
   const [notice,setNotice] = useState("");
   const [authLoading,setAuthLoading] = useState(true);
-  const [mobileMenu,setMobileMenu] = useState(false);\n  const [showBusinessForm,setShowBusinessForm] = useState(false);\n  const [businessName,setBusinessName] = useState("");\n  const [storeName,setStoreName] = useState("");
+  const [mobileMenu,setMobileMenu] = useState(false);
+  const [showBusinessForm,setShowBusinessForm] = useState(false);
+  const [businessName,setBusinessName] = useState("");
+  const [storeName,setStoreName] = useState("");
 
   useEffect(() => {
     if (!supabase) { setAuthLoading(false); return; }
@@ -63,7 +66,16 @@ function App() {
     const {error} = await supabase.auth.verifyOtp({email:email.trim(),token:otp.trim(),type:"email"});
     setBusy(false); if(error) setNotice(error.message);
   }
-  async function createBusiness(e:FormEvent) {\n    e.preventDefault(); if(!supabase) return;\n    setBusy(true); setNotice("");\n    const {data,error} = await supabase.rpc("create_business",{p_business_name:businessName.trim(),p_store_name:storeName.trim()});\n    setBusy(false);\n    if(error) { setNotice(error.message); return; }\n    setProfile(current=>({full_name:current?.full_name ?? user?.email?.split("@")[0] ?? "Owner",active_organization_id:data as string}));\n    setRole("owner"); setShowBusinessForm(false); setNotice("Bisnis dan toko pertama berhasil dibuat.");\n  }\n  async function logout(){await supabase?.auth.signOut();setPage("overview");}
+  async function createBusiness(e:FormEvent) {
+    e.preventDefault(); if(!supabase) return;
+    setBusy(true); setNotice("");
+    const {data,error} = await supabase.rpc("create_business",{p_business_name:businessName.trim(),p_store_name:storeName.trim()});
+    setBusy(false);
+    if(error) { setNotice(error.message); return; }
+    setProfile(current=>({full_name:current?.full_name ?? user?.email?.split("@")[0] ?? "Owner",active_organization_id:data as string}));
+    setRole("owner"); setShowBusinessForm(false); setNotice("Bisnis dan toko pertama berhasil dibuat.");
+  }
+  async function logout(){await supabase?.auth.signOut();setPage("overview");}
   if(authLoading) return <div className="boot"><div className="brand-mark">A</div><span>Menyiapkan ACOPOS…</span></div>;
   if(user) return <div className="app-shell">
     <aside className={mobileMenu?"sidebar open":"sidebar"}>
