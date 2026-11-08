@@ -43,7 +43,7 @@ function Field({label,children}: {label:string;children:ReactNode}) {return <lab
 function Metric({label,value,icon:Icon,sub}: {label:string;value:string;icon:typeof Wallet;sub?:string}) {
  return <div className="metric-card"><div className="metric-top"><span>{label}</span><Icon size={17}/></div><strong>{value}</strong>{sub&&<small>{sub}</small>}</div>;
 }
-export function Workspace({user,onLogout}:{user:User;onLogout:()=>void}) {
+export function Workspace({user,onLogout,onBackToPlatform}:{user:User;onLogout:()=>void;onBackToPlatform?:()=>void}) {
  const [profile,setProfile]=useState<any>(null),[role,setRole]=useState<Role>("employee"),[org,setOrg]=useState<any>(null);
  const [stores,setStores]=useState<StoreRow[]>([]),[storeId,setStoreId]=useState(""),[products,setProducts]=useState<Product[]>([]),[categories,setCategories]=useState<Category[]>([]),[inventory,setInventory]=useState<InventoryRow[]>([]);
  const [orders,setOrders]=useState<Order[]>([]),[paymentProofs,setPaymentProofs]=useState<any[]>([]),[members,setMembers]=useState<Member[]>([]),[invites,setInvites]=useState<any[]>([]),[inviteEmail,setInviteEmail]=useState(""),[inviteRole,setInviteRole]=useState<"manager"|"cashier"|"employee">("employee"),[attendance,setAttendance]=useState<any[]>([]),[schedules,setSchedules]=useState<any[]>([]),[sales,setSales]=useState<any[]>([]),[shift,setShift]=useState<Shift|null>(null),[payment,setPayment]=useState<any>(null),[subscription,setSubscription]=useState<any>(null);
@@ -126,7 +126,7 @@ export function Workspace({user,onLogout}:{user:User;onLogout:()=>void}) {
    <div className="workspace-label">WORKSPACE</div><div className="workspace-card"><span className="workspace-dot"/><span><b>{org.name}</b><small>{role.toUpperCase()}</small></span><ChevronDown size={14}/></div>
    {stores.length>1&&<Field label="PILIH CABANG"><select value={storeId} onChange={e=>setStoreId(e.target.value)}>{stores.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></Field>}
    <nav>{visibleNav.map(n=><button key={n.id} className={page===n.id?"nav-item active":"nav-item"} onClick={()=>{setPage(n.id);setMobile(false)}}><n.icon size={17} strokeWidth={1.7}/>{n.label}</button>)}</nav>
-   <div className="sidebar-bottom"><div className="plan-card"><ShieldCheck size={18}/><b>{subscription?.plan_name||"Starter"} workspace</b><small>Status: {subscription?.status||"trial"}</small></div><button className="nav-item" onClick={onLogout}><LogOut size={16}/>Keluar</button></div>
+   <div className="sidebar-bottom"><div className="plan-card"><ShieldCheck size={18}/><b>{subscription?.plan_name||"Starter"} workspace</b><small>Status: {subscription?.status||"trial"}</small></div>{onBackToPlatform&&<button className="nav-item" onClick={onBackToPlatform}><ShieldCheck size={16}/>Platform Console</button>}<button className="nav-item" onClick={onLogout}><LogOut size={16}/>Keluar</button></div>
   </aside>
   <main className="dashboard-main">
    <header className="topbar"><button className="mobile-toggle" onClick={()=>setMobile(!mobile)}><Menu size={19}/></button><div className="crumb">Workspace <span>/</span> {title}</div><div className="top-actions"><button className="icon-btn" onClick={refresh} aria-label="Muat ulang"><RefreshCw size={16}/></button><span className="user-chip">{profile?.full_name||user.email}</span><div className="avatar">{(profile?.full_name||user.email||"A").slice(0,1).toUpperCase()}</div></div></header>
