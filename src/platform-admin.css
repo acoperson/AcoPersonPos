@@ -29,3 +29,7 @@
 .platform-footnote{display:flex;align-items:center;gap:8px;color:#747e87;font-size:8px;margin-top:20px}
 @media(max-width:900px){.platform-grid{grid-template-columns:1fr}}
 @media(max-width:680px){.platform-shell .sidebar{position:fixed;z-index:30;top:0;bottom:0;left:-275px;transition:left .2s}.platform-shell .sidebar.open{left:0}.platform-shell .mobile-toggle{display:inline-flex}.platform-shell .topbar{padding:0 14px}.platform-shell .dash-content{padding:26px 14px}.platform-shell .page-heading{display:block}.platform-shell .date-chip{display:inline-block;margin-top:12px}.platform-shell .platform-welcome h2{font-size:26px}.platform-shell .platform-activity{padding:15px}}
+
+.platform-live i{animation:platform-pulse 2.8s ease-in-out infinite}
+.metric-card:hover{transform:translateY(-3px);border-color:#c6d0d955;box-shadow:0 14px 30px #0003}
+@keyframes platform-pulse{0%,100%{box-shadow:0 0 0 0 #9cc8a500}50%{box-shadow:0 0 0 6px #9cc8a522}}
