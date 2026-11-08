@@ -24,3 +24,36 @@
 
 
 .pricing-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pricing-card-business{background:linear-gradient(145deg,#292e33,#171a1e)}.pricing-amount{display:block;font:600 20px var(--serif);margin:16px 0 8px;color:#e5e8ea}.pricing-card a{display:flex;align-items:center;justify-content:space-between}.application-actions{display:flex;gap:7px;flex-wrap:wrap}.application-actions .ui-btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}@media(max-width:650px){.pricing-cards{grid-template-columns:1fr}.pricing-card{padding:25px}}
+
+/* ACOPOS motion language: liquid chrome, restrained depth, and scroll reveals. */
+.hero-art{isolation:isolate}
+.hero-glow{position:absolute;inset:8% 4%;z-index:0;border-radius:50%;background:radial-gradient(ellipse,rgba(196,205,214,.13),transparent 66%);filter:blur(24px);animation:glow-breathe 8s ease-in-out infinite}
+.silver-core{animation:silver-float 7s ease-in-out infinite}
+.silver-core:before{content:"";position:absolute;inset:1px;z-index:1;border-radius:50%;pointer-events:none;background:linear-gradient(112deg,transparent 18%,rgba(255,255,255,.05) 35%,rgba(255,255,255,.58) 49%,rgba(255,255,255,.08) 61%,transparent 78%);background-size:220% 100%;mix-blend-mode:screen;animation:liquid-sweep 6.5s ease-in-out infinite}
+.silver-core span,.silver-core small{position:relative;z-index:2}
+.silver-core:after{z-index:3}
+.orbit-one{animation:orbit-drift 28s linear infinite}
+.orbit-two{animation:orbit-drift-reverse 36s linear infinite}
+.float-card{animation:card-hover 7s ease-in-out infinite}
+.float-bottom{animation-delay:-3.5s}
+.eco-node{animation:node-hover 8s ease-in-out infinite}
+.node-1{animation-delay:-1.5s}.node-2{animation-delay:-3s}.node-3{animation-delay:-4.5s}.node-4{animation-delay:-6s}
+.feature-card,.pricing-card,.foundations-grid article{transition:transform .35s ease,border-color .35s ease,box-shadow .35s ease}
+.feature-card:hover,.pricing-card:hover{transform:translateY(-6px);box-shadow:0 22px 48px rgba(0,0,0,.18)}
+.pricing-card:hover{border-color:rgba(220,228,235,.42)}
+[data-reveal]{opacity:0;transform:translateY(26px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+[data-reveal].is-visible{opacity:1;transform:translateY(0)}
+.feature-card[data-reveal]:nth-child(2){transition-delay:.08s}
+.feature-card[data-reveal]:nth-child(3){transition-delay:.16s}
+.feature-card[data-reveal]:nth-child(4){transition-delay:.24s}
+.foundations-grid article:nth-child(2){transition-delay:.08s}
+.foundations-grid article:nth-child(3){transition-delay:.16s}
+.foundations-grid article:nth-child(4){transition-delay:.24s}
+@keyframes silver-float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-12px) rotate(2deg)}}
+@keyframes liquid-sweep{0%,15%{background-position:150% 0}65%,100%{background-position:-80% 0}}
+@keyframes orbit-drift{from{transform:rotate(-22deg)}to{transform:rotate(338deg)}}
+@keyframes orbit-drift-reverse{from{transform:rotate(28deg)}to{transform:rotate(-332deg)}}
+@keyframes card-hover{0%,100%{translate:0 0}50%{translate:0 -9px}}
+@keyframes node-hover{0%,100%{translate:0 0}50%{translate:0 -5px}}
+@keyframes glow-breathe{0%,100%{opacity:.55;scale:.94}50%{opacity:1;scale:1.06}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}[data-reveal]{opacity:1;transform:none}}
