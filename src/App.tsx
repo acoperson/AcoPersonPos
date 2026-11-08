@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, CalendarClock, ChartNoAxesCombined, ChevronDown, LayoutDashboard, LogOut, Menu, Package, QrCode, Settings, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Building2, CalendarClock, ChartNoAxesCombined, ChevronDown, LayoutDashboard, LogOut, Menu, Package, QrCode, Settings, ShieldCheck, ShoppingBag, Sparkles, Users } from "lucide-react";
 import type { FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import { Workspace, QROrderPage } from "./Workspace";
+import { PlatformAdmin } from "./PlatformAdmin";
 import "./workspace.css";
 
 type Role = "owner" | "admin" | "manager" | "cashier" | "employee";
@@ -29,6 +30,8 @@ function App() {
   const [busy,setBusy] = useState(false);
   const [notice,setNotice] = useState("");
   const [authLoading,setAuthLoading] = useState(true);
+  const [isPlatformAdmin,setIsPlatformAdmin] = useState(false);
+  const [platformAccessLoading,setPlatformAccessLoading] = useState(true);
   const [mobileMenu,setMobileMenu] = useState(false);
   const [showBusinessForm,setShowBusinessForm] = useState(false);
   const [businessName,setBusinessName] = useState("");
@@ -54,6 +57,22 @@ function App() {
     }
     loadProfile();
   },[user]);
+  useEffect(() => {
+    let active = true;
+    if (!user || !supabase) {
+      setIsPlatformAdmin(false);
+      setPlatformAccessLoading(false);
+      return () => { active = false; };
+    }
+    setPlatformAccessLoading(true);
+    supabase.rpc("is_platform_admin").then(({ data, error }) => {
+      if (!active) return;
+      setIsPlatformAdmin(!error && data === true);
+      setPlatformAccessLoading(false);
+    });
+    return () => { active = false; };
+  }, [user]);
+
   const title = useMemo(() => modules.find(m=>m.id===page)?.label ?? "Ringkasan",[page]);
 
   async function sendOtp(e:FormEvent) {
@@ -79,11 +98,12 @@ function App() {
     setRole("owner"); setShowBusinessForm(false); setNotice("Bisnis dan toko pertama berhasil dibuat.");
   }
   async function logout(){await supabase?.auth.signOut();setPage("overview");}
-  if(authLoading) return <div className="boot"><div className="brand-mark">A</div><span>Menyiapkan ACOPOS…</span></div>;
+  if(authLoading || (user && platformAccessLoading)) return <div className="boot"><div className="brand-mark">A</div><span>Menyiapkan ACOPOS…</span></div>;
   if(window.location.pathname.startsWith("/order/")) return <QROrderPage slug={window.location.pathname.split("/")[2]||""}/>;
+  if(user && isPlatformAdmin) return <PlatformAdmin user={user} onLogout={logout}/>;
   if(user) return <Workspace user={user} onLogout={logout}/>;
   return <div className="site">
-    <header className="site-nav"><a className="brand-lockup" href="#"><span className="brand-mark">A</span><span><b>ACOPOS</b><small>BUSINESS OS</small></span></a><nav className="public-links"><a href="#ecosystem">Ekosistem</a><a href="#features">Fitur</a><a href="#pricing">Paket</a></nav><button className="nav-cta" onClick={()=>{document.getElementById("login")?.scrollIntoView({behavior:"smooth"})}}>Masuk workspace <ArrowUpRight size={14}/></button></header>
+    <header className="site-nav"><a className="brand-lockup" href="#"><span className="brand-mark">A</span><span><b>ACOPOS</b><small>BUSINESS OS</small></span></a><nav className="public-links"><a href="#ecosystem">Ekosistem</a><a href="#features">Fitur</a><a href="#foundations">Fondasi</a><a href="#pricing">Paket</a></nav><button className="nav-cta" onClick={()=>{document.getElementById("login")?.scrollIntoView({behavior:"smooth"})}}>Masuk workspace <ArrowUpRight size={14}/></button></header>
     <main>
       <section className="hero">
         <div className="hero-glow"></div><div className="hero-copy"><div className="eyebrow"><span className="eyebrow-line"></span> THE OPERATING SYSTEM FOR BUSINESS</div><h1>Bisnis bergerak.<br/><em>Kendali tetap</em> di tangan.</h1><p>Satukan kasir, inventori, pesanan pelanggan, tim, dan laporan dalam satu ekosistem yang terasa sederhana — bahkan saat bisnis berkembang.</p><div className="hero-actions"><a className="primary-btn" href="#login">Mulai kelola bisnis <ArrowUpRight size={14}/></a><a className="text-link" href="#ecosystem">Jelajahi ekosistem <ArrowDown size={14}/></a></div><div className="hero-proof"><span className="proof-icon"><ShieldCheck size={17}/></span><span>Dibuat untuk operasional yang lebih teratur.</span></div></div>
@@ -93,6 +113,7 @@ function App() {
       <section className="ticker"><span>POINT OF SALE</span><Sparkles size={12} strokeWidth={1.6}/><span>INVENTORY</span><Sparkles size={12} strokeWidth={1.6}/><span>TEAM MANAGEMENT</span><Sparkles size={12} strokeWidth={1.6}/><span>SMART REPORTS</span><Sparkles size={12} strokeWidth={1.6}/><span>QR ORDERING</span></section>
       <section className="intro section-wrap" id="ecosystem"><div className="section-kicker">02 / THE ECOSYSTEM</div><div className="intro-grid"><h2>Satu pusat kendali.<br/><em>Seluruh bisnis.</em></h2><div><p className="large-copy">Tidak perlu berpindah-pindah aplikasi untuk memahami apa yang terjadi di bisnis kamu.</p><p className="muted-copy">ACOPOS menghubungkan aktivitas di toko dengan keputusan di level pemilik. Dari transaksi pertama sampai ringkasan performa.</p></div></div><div className="ecosystem-visual"><div className="eco-center"><span>A</span><b>ACOPOS</b><small>CONNECTED BUSINESS</small></div>{["POS & CASHIER","PRODUCTS","PEOPLE","ORDERS","INSIGHTS"].map((x,i)=><div className={"eco-node node-"+i} key={x}><i>{[ShoppingBag,Package,Users,QrCode,ChartNoAxesCombined][i] && (()=>{const Icon=[ShoppingBag,Package,Users,QrCode,ChartNoAxesCombined][i];return <Icon size={14} strokeWidth={1.7}/>})()}</i>{x}</div>)}</div></section>
       <section className="features-section" id="features"><div className="section-wrap"><div className="section-kicker">03 / BUILT TO WORK TOGETHER</div><div className="feature-heading"><h2>Operasional yang terasa<br/><em>lebih ringan.</em></h2><p>Fondasi yang kuat untuk aktivitas harian, kontrol yang jelas untuk pertumbuhan jangka panjang.</p></div><div className="feature-grid"><article className="feature-card feature-dark"><span className="feature-number">01 / TRANSACTIONS</span><div className="feature-symbol"><ShoppingBag size={27} strokeWidth={1.5}/></div><h3>Kasir tanpa kerumitan.</h3><p>Alur transaksi, shift kasir, dan riwayat penjualan berada dalam satu tempat.</p><span className="feature-arrow"><ArrowUpRight size={15}/></span></article><article className="feature-card"><span className="feature-number">02 / INVENTORY</span><div className="feature-symbol"><Package size={27} strokeWidth={1.5}/></div><h3>Stok lebih terpantau.</h3><p>Kelola produk, kategori, harga, dan pergerakan persediaan secara terstruktur.</p><span className="feature-arrow"><ArrowUpRight size={15}/></span></article><article className="feature-card"><span className="feature-number">03 / CUSTOMER ORDERS</span><div className="feature-symbol"><QrCode size={27} strokeWidth={1.5}/></div><h3>Pesanan dari QR.</h3><p>Pelanggan dapat melihat menu dan mengirim pesanan dari ponsel mereka.</p><span className="feature-arrow"><ArrowUpRight size={15}/></span></article><article className="feature-card"><span className="feature-number">04 / PEOPLE</span><div className="feature-symbol"><Users size={27} strokeWidth={1.5}/></div><h3>Tim dalam satu ritme.</h3><p>Atur karyawan, jadwal, absensi, dan pembagian shift toko.</p><span className="feature-arrow"><ArrowUpRight size={15}/></span></article><article className="feature-card feature-wide"><div><span className="feature-number">05 / BUSINESS INTELLIGENCE</span><div className="feature-symbol"><ChartNoAxesCombined size={27} strokeWidth={1.5}/></div><h3>Keputusan dengan gambaran utuh.</h3><p>Ringkasan penjualan dan aktivitas toko membantu pemilik memahami bisnis tanpa kehilangan detail operasional.</p></div><div className="mini-chart"><div className="chart-label">BUSINESS OVERVIEW <span>LIVE WORKSPACE</span></div><div className="chart-bars">{[32,48,38,68,54,82,61,92,72,100,79,88].map((h,i)=><i key={i} style={{height:h+"%"}}/>)}</div><div className="chart-foot"><span>CONNECTED DATA</span><b>ONE VIEW. MORE CLARITY.</b></div></div></article></div></div></section>
+      <section className="foundations-section section-wrap" id="foundations"><div className="section-kicker">04 / FOUR CORE FOUNDATIONS</div><div className="foundations-heading"><h2>Empat fondasi.<br/><em>Satu ekosistem bisnis.</em></h2><p>Setiap bagian ACOPOS dirancang untuk saling terhubung — dari kendali pemilik hingga aktivitas harian di toko.</p></div><div className="foundations-grid"><article><span>01 / BUSINESS MANAGEMENT</span><Building2/><h3>Business Management</h3><p>Kelola bisnis, cabang, hak akses, paket, dan kontrol Owner dalam satu pusat kendali.</p></article><article><span>02 / STORE OPERATIONS</span><ShoppingBag/><h3>Store Operations</h3><p>POS, produk, stok, pesanan QR, dan pembayaran manual yang terhubung dengan operasional toko.</p></article><article><span>03 / WORKFORCE MANAGEMENT</span><Users/><h3>Workforce Management</h3><p>Atur karyawan, peran, jadwal, absensi, dan shift kasir secara terstruktur.</p></article><article><span>04 / BUSINESS INTELLIGENCE</span><ChartNoAxesCombined/><h3>Business Intelligence</h3><p>Pantau penjualan, transaksi, persediaan, dan aktivitas bisnis melalui laporan terpadu.</p></article></div></section>
       <section className="pricing section-wrap" id="pricing"><div className="section-kicker">04 / SIMPLE BY DESIGN</div><div className="pricing-row"><div><h2>Mulai dari yang penting.<br/><em>Berkembang dengan percaya diri.</em></h2><p className="muted-copy">Paket dan kapasitas bisnis akan ditampilkan secara transparan. Hubungi tim ACOPOS untuk informasi akses awal.</p></div><div className="pricing-card"><span className="pricing-label">ACOPOS WORKSPACE</span><h3>One platform.</h3><p>POS · Inventory · People · Orders · Reports</p><a href="#login">Masuk ke workspace <ArrowUpRight size={14}/></a></div></div></section>
       <section className="login-section" id="login"><div className="login-intro"><div className="section-kicker">YOUR BUSINESS, CONNECTED</div><h2>Ruang kendali<br/><em>dimulai di sini.</em></h2><p>Masuk dengan email. Kami akan mengirimkan kode verifikasi satu kali.</p><div className="login-security"><ShieldCheck size={18}/> Secure email verification</div></div><div className="login-card"><div className="login-card-top"><span className="brand-mark">A</span><span className="secure-label"><i/> SECURE ACCESS</span></div><h3>{otpSent?"Periksa email kamu.":"Selamat datang kembali."}</h3><p>{otpSent?"Masukkan kode 6 digit yang dikirim ke alamat email kamu.":"Masukkan email untuk menerima kode verifikasi sekali pakai."}</p>
         {!isSupabaseConfigured&&<div className="notice error">Koneksi Supabase belum tersedia. Periksa Environment Variables Netlify.</div>}
