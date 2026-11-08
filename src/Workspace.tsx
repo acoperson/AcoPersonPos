@@ -82,7 +82,7 @@ export function Workspace({user,onLogout,onBackToPlatform}:{user:User;onLogout:(
     supabase.from("attendance").select("*").eq("organization_id",orgId).order("clock_in",{ascending:false}).limit(100),
     supabase.from("schedules").select("*").eq("organization_id",orgId).order("shift_date",{ascending:false}).limit(100),
     supabase.from("sales").select("*").eq("organization_id",orgId).order("created_at",{ascending:false}).limit(100),
-    supabase.from("shifts").select("*").eq("organization_id",orgId).eq("cashier_user_id",user.id).eq("status","open").maybeSingle(),
+    supabase.from("shifts").select("*").eq("organization_id",orgId).eq("store_id",storeId).eq("cashier_user_id",user.id).eq("status","open").maybeSingle(),
     supabase.from("subscriptions").select("*").eq("organization_id",orgId).maybeSingle()
    ]);
    if(me)throw me;if(oe)throw oe;if(se)throw se;if(pre)throw pre;if(ce)throw ce;if(orde)throw orde;
@@ -101,7 +101,7 @@ export function Workspace({user,onLogout,onBackToPlatform}:{user:User;onLogout:(
    setInvites(inviteRows||[]);
   }catch(e:any){setMessage(e.message||"Gagal memuat data.");}
   finally{setLoading(false);}
- },[user.id]);
+ },[user.id,storeId]);
  useEffect(()=>{refresh()},[refresh]);
  useEffect(()=>{if(!supabase||!storeId)return;supabase.from("store_payment_settings").select("*").eq("store_id",storeId).maybeSingle().then(({data})=>{setPayment(data);setAllowProof(data?.allow_payment_proof??true);});},[storeId]);
  const activeStore=stores.find(s=>s.id===storeId)||stores[0];
