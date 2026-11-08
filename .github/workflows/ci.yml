@@ -31,5 +31,8 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
+      - name: Verify database migration invariants
+        run: npm run verify:migrations
+
       - name: Build production bundle
         run: npm run build
