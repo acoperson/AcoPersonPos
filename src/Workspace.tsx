@@ -13,7 +13,8 @@ import { supabase } from "./lib/supabase";
 type Role = "owner"|"admin"|"manager"|"cashier"|"employee";
 type StoreRow = {id:string;name:string;code:string|null;address:string|null;phone:string|null;qr_slug:string|null;is_active:boolean};
 type Product = {id:string;name:string;sku:string|null;barcode:string|null;description:string|null;image_url:string|null;unit:string;cost_price:number;selling_price:number;stock_quantity:number;low_stock_threshold:number;is_available:boolean;category_id:string|null};
-type Category = {id:string;name:string};\ntype InventoryRow = {id:string;organization_id:string;store_id:string;product_id:string;quantity:number;low_stock_threshold:number};
+type Category = {id:string;name:string};
+type InventoryRow = {id:string;organization_id:string;store_id:string;product_id:string;quantity:number;low_stock_threshold:number};
 type Order = {id:string;order_number:string;customer_name:string;customer_note:string|null;status:string;total:number;created_at:string;store_id:string};
 type Shift = {id:string;opening_cash:number;status:string;opened_at:string;closing_cash:number|null};
 type Member = {id:string;user_id:string;role:Role;profiles?:{full_name:string|null;phone:string|null}};
@@ -76,7 +77,8 @@ export function Workspace({user,onLogout}:{user:User;onLogout:()=>void}) {
     supabase.from("subscriptions").select("*").eq("organization_id",orgId).maybeSingle()
    ]);
    if(me)throw me;if(oe)throw oe;if(se)throw se;if(pre)throw pre;if(ce)throw ce;if(orde)throw orde;
-   const myRole=(m?.role as Role)||"employee";const {data:inv}=await supabase.from("store_inventory").select("*").eq("organization_id",orgId);\n   setInventory((inv||[]) as InventoryRow[]);setRole(myRole);setOrg(o);setStores(st||[]);setProducts(pr||[]);setCategories(ca||[]);setOrders(ord||[]);setAttendance(at||[]);setSchedules(sc||[]);setSales(sa||[]);setShift(sh||null);setPayment(ps||null);setSubscription(sub||null);
+   const myRole=(m?.role as Role)||"employee";const {data:inv}=await supabase.from("store_inventory").select("*").eq("organization_id",orgId);
+   setInventory((inv||[]) as InventoryRow[]);setRole(myRole);setOrg(o);setStores(st||[]);setProducts(pr||[]);setCategories(ca||[]);setOrders(ord||[]);setAttendance(at||[]);setSchedules(sc||[]);setSales(sa||[]);setShift(sh||null);setPayment(ps||null);setSubscription(sub||null);
    setStoreId(current=>(st||[]).some(x=>x.id===current)?current:(st?.[0]?.id||""));
    const {data:mem}=await supabase.from("memberships").select("id,user_id,role").eq("organization_id",orgId);
    setMembers((mem||[]) as Member[]);
@@ -84,7 +86,8 @@ export function Workspace({user,onLogout}:{user:User;onLogout:()=>void}) {
   finally{setLoading(false);}
  },[user.id]);
  useEffect(()=>{refresh()},[refresh]);
- const activeStore=stores.find(s=>s.id===storeId)||stores[0];\n const stockFor=(productId:string)=>Number(inventory.find(i=>i.product_id===productId&&i.store_id===activeStore?.id)?.quantity ?? products.find(p=>p.id===productId)?.stock_quantity ?? 0);
+ const activeStore=stores.find(s=>s.id===storeId)||stores[0];
+ const stockFor=(productId:string)=>Number(inventory.find(i=>i.product_id===productId&&i.store_id===activeStore?.id)?.quantity ?? products.find(p=>p.id===productId)?.stock_quantity ?? 0);
  const visibleNav=nav.filter(n=>n.roles.includes(role));
  const title=visibleNav.find(n=>n.id===page)?.label||"Ringkasan";
  const filteredProducts=products.filter(p=>(p.name+" "+(p.sku||"")).toLowerCase().includes(query.toLowerCase()));
