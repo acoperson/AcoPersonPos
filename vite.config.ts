@@ -1,1 +1,0 @@
-import { defineConfig } from "vite";\nexport default defineConfig({});
