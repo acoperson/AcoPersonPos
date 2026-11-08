@@ -213,3 +213,47 @@ begin
  return jsonb_build_object('order_id',v_order_id,'order_number',v_order_number,'status','awaiting_payment_confirmation','total',v_subtotal);
 end; $function$
 
+-- Reject NULL package values instead of falling through to the Business application path.
+create or replace function public.submit_business_application(p_business_name text,p_store_name text,p_requested_plan text default 'free',p_applicant_note text default null)
+returns jsonb language plpgsql security definer set search_path=''
+as $function$
+declare v_user uuid:=auth.uid(); v_org uuid; v_app uuid;
+begin
+ if v_user is null then raise exception 'Authentication required'; end if;
+ if length(trim(coalesce(p_business_name,'')))<2 or length(trim(coalesce(p_store_name,'')))<2 then raise exception 'Nama bisnis dan toko minimal 2 karakter'; end if;
+ if p_requested_plan is null or p_requested_plan not in ('free','business') then raise exception 'Paket tidak valid'; end if;
+ if exists(select 1 from public.memberships where user_id=v_user) then raise exception 'Akun ini sudah memiliki bisnis. Gunakan menu upgrade paket.'; end if;
+ if exists(select 1 from public.business_applications where user_id=v_user and status='pending' and application_type='new_business') then raise exception 'Pengajuan bisnis kamu masih menunggu persetujuan.'; end if;
+ if p_requested_plan='free' then
+  insert into public.organizations(name,owner_user_id) values(trim(p_business_name),v_user) returning id into v_org;
+  insert into public.memberships(organization_id,user_id,role) values(v_org,v_user,'owner');
+  insert into public.stores(organization_id,name,code) values(v_org,trim(p_store_name),'STORE-001');
+  insert into public.subscriptions(organization_id,plan_name,status,starts_at,ends_at) values(v_org,'free','active',now(),null);
+  insert into public.profiles(id,active_organization_id) values(v_user,v_org)
+   on conflict(id) do update set active_organization_id=excluded.active_organization_id,updated_at=now();
+  return jsonb_build_object('result','activated','organization_id',v_org,'plan','free','status','active');
+ end if;
+ insert into public.business_applications(user_id,application_type,business_name,store_name,requested_plan,status,applicant_note)
+ values(v_user,'new_business',trim(p_business_name),trim(p_store_name),'business','pending',nullif(trim(coalesce(p_applicant_note,'')),''))
+ returning id into v_app;
+ return jsonb_build_object('result','pending','application_id',v_app,'plan','business','status','pending');
+end;
+$function$;
+
+create or replace function public.request_business_upgrade(p_organization_id uuid,p_requested_plan text default 'business',p_applicant_note text default null)
+returns uuid language plpgsql security definer set search_path=''
+as $function$
+declare v_user uuid:=auth.uid(); v_app uuid; v_plan text;
+begin
+ if v_user is null then raise exception 'Authentication required'; end if;
+ if p_requested_plan is distinct from 'business' then raise exception 'Target upgrade tidak valid'; end if;
+ if not private.has_org_role(p_organization_id,array['owner']) then raise exception 'Hanya pemilik bisnis yang dapat mengajukan upgrade'; end if;
+ select plan_name into v_plan from public.subscriptions where organization_id=p_organization_id order by created_at desc limit 1;
+ if v_plan is null then raise exception 'Langganan bisnis tidak ditemukan'; end if;
+ if lower(v_plan)='business' then raise exception 'Bisnis sudah menggunakan paket Bisnis'; end if;
+ if exists(select 1 from public.business_applications where organization_id=p_organization_id and application_type='upgrade' and status='pending') then raise exception 'Pengajuan upgrade masih menunggu persetujuan.'; end if;
+ insert into public.business_applications(user_id,application_type,organization_id,business_name,requested_plan,status,applicant_note)
+ select v_user,'upgrade',o.id,o.name,'business','pending',nullif(trim(coalesce(p_applicant_note,'')),'') from public.organizations o where o.id=p_organization_id returning id into v_app;
+ return v_app;
+end;
+$function$;
