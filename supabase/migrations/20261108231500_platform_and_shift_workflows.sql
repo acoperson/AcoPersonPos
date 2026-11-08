@@ -2,73 +2,39 @@
 -- Applied to the connected Supabase project on 2026-11-08.
 
 create or replace function public.platform_admin_overview()
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
+returns jsonb language plpgsql security definer set search_path=''
 as $function$
-declare
-  v_result jsonb;
+declare v_result jsonb;
 begin
-  if auth.uid() is null or not public.is_platform_admin() then
-    raise exception 'Platform admin access required';
-  end if;
-
-  select jsonb_build_object(
-    'stats', jsonb_build_object(
-      'organizations', (select count(*) from public.organizations),
-      'stores', (select count(*) from public.stores),
-      'users', (select count(*) from auth.users),
-      'sales', (select count(*) from public.sales),
-      'qr_orders', (select count(*) from public.qr_orders),
-      'subscriptions', (select count(*) from public.subscriptions),
-      'active_subscriptions', (select count(*) from public.subscriptions where status = 'active')
-    ),
-    'organizations', coalesce((
-      select jsonb_agg(
-        jsonb_build_object(
-          'id', o.id, 'name', o.name, 'slug', o.slug, 'owner_email', u.email,
-          'created_at', o.created_at,
-          'store_count', (select count(*) from public.stores s where s.organization_id = o.id),
-          'member_count', (select count(*) from public.memberships m where m.organization_id = o.id),
-          'plan_name', (select sub.plan_name from public.subscriptions sub where sub.organization_id = o.id limit 1),
-          'subscription_status', (select sub.status from public.subscriptions sub where sub.organization_id = o.id limit 1)
-        ) order by o.created_at desc
-      )
-      from public.organizations o
-      left join auth.users u on u.id = o.owner_user_id
-    ), '[]'::jsonb),
-    'users', coalesce((
-      select jsonb_agg(jsonb_build_object(
-        'id', recent.id, 'email', recent.email, 'full_name', recent.full_name,
-        'created_at', recent.created_at, 'last_sign_in_at', recent.last_sign_in_at
-      ) order by recent.created_at desc)
-      from (
-        select u.id, u.email, p.full_name, u.created_at, u.last_sign_in_at
-        from auth.users u
-        left join public.profiles p on p.id = u.id
-        order by u.created_at desc
-        limit 100
-      ) recent
-    ), '[]'::jsonb),
-    'subscriptions', coalesce((
-      select jsonb_agg(jsonb_build_object(
-        'organization_id', o.id, 'organization_name', o.name, 'owner_email', u.email,
-        'plan_name', sub.plan_name, 'status', sub.status,
-        'starts_at', sub.starts_at, 'ends_at', sub.ends_at
-      ) order by sub.created_at desc)
-      from public.subscriptions sub
-      join public.organizations o on o.id = sub.organization_id
-      left join auth.users u on u.id = o.owner_user_id
-    ), '[]'::jsonb)
-  ) into v_result;
-  return v_result;
+ if auth.uid() is null or not public.is_platform_admin() then raise exception 'Platform admin access required'; end if;
+ select jsonb_build_object(
+  'stats',jsonb_build_object(
+   'organizations',(select count(*) from public.organizations),'stores',(select count(*) from public.stores),
+   'users',(select count(*) from auth.users),'sales',(select count(*) from public.sales),
+   'qr_orders',(select count(*) from public.qr_orders),'subscriptions',(select count(*) from public.subscriptions),
+   'active_subscriptions',(select count(*) from public.subscriptions where status='active'),
+   'pending_applications',(select count(*) from public.business_applications where status='pending')
+  ),
+  'organizations',coalesce((select jsonb_agg(jsonb_build_object(
+   'id',o.id,'name',o.name,'slug',o.slug,'owner_email',u.email,'created_at',o.created_at,
+   'store_count',(select count(*) from public.stores s where s.organization_id=o.id),
+   'member_count',(select count(*) from public.memberships m where m.organization_id=o.id),
+   'plan_name',(select sub.plan_name from public.subscriptions sub where sub.organization_id=o.id order by sub.created_at desc limit 1),
+   'subscription_status',(select sub.status from public.subscriptions sub where sub.organization_id=o.id order by sub.created_at desc limit 1)
+  ) order by o.created_at desc) from public.organizations o left join auth.users u on u.id=o.owner_user_id),'[]'::jsonb),
+  'users',coalesce((select jsonb_agg(jsonb_build_object('id',r.id,'email',r.email,'full_name',r.full_name,'created_at',r.created_at,'last_sign_in_at',r.last_sign_in_at) order by r.created_at desc)
+   from (select u.id,u.email,p.full_name,u.created_at,u.last_sign_in_at from auth.users u left join public.profiles p on p.id=u.id order by u.created_at desc limit 100) r),'[]'::jsonb),
+  'subscriptions',coalesce((select jsonb_agg(jsonb_build_object('organization_id',o.id,'organization_name',o.name,'owner_email',u.email,'plan_name',sub.plan_name,'status',sub.status,'starts_at',sub.starts_at,'ends_at',sub.ends_at) order by sub.created_at desc)
+   from public.subscriptions sub join public.organizations o on o.id=sub.organization_id left join auth.users u on u.id=o.owner_user_id),'[]'::jsonb),
+  'applications',coalesce((select jsonb_agg(jsonb_build_object(
+   'id',a.id,'user_id',a.user_id,'owner_email',u.email,'application_type',a.application_type,'organization_id',a.organization_id,
+   'business_name',a.business_name,'store_name',a.store_name,'requested_plan',a.requested_plan,'status',a.status,
+   'applicant_note',a.applicant_note,'admin_note',a.admin_note,'created_at',a.created_at
+  ) order by a.created_at desc) from public.business_applications a left join auth.users u on u.id=a.user_id),'[]'::jsonb)
+ ) into v_result;
+ return v_result;
 end;
 $function$;
-
-revoke all on function public.platform_admin_overview() from public;
-revoke all on function public.platform_admin_overview() from anon;
-grant execute on function public.platform_admin_overview() to authenticated;
 
 create or replace function public.open_cashier_shift(p_store_id uuid, p_opening_cash numeric default 0)
 returns uuid
