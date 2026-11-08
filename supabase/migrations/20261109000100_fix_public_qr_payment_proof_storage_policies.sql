@@ -103,12 +103,14 @@ revoke all on function public.claim_employee_invites() from public, anon;
 grant execute on function public.claim_employee_invites() to authenticated;
 
 -- Prevent duplicate open shifts/check-ins during rapid or concurrent requests.
-create unique index if not exists shifts_one_open_per_cashier_store_idx
-  on public.shifts(store_id,cashier_user_id)
+drop index if exists public.shifts_one_open_per_cashier_store_idx;
+create unique index if not exists shifts_one_open_per_cashier_idx
+  on public.shifts(cashier_user_id)
   where status = 'open';
 
-create unique index if not exists attendance_one_open_per_employee_store_idx
-  on public.attendance(store_id,employee_user_id)
+drop index if exists public.attendance_one_open_per_employee_store_idx;
+create unique index if not exists attendance_one_open_per_employee_idx
+  on public.attendance(employee_user_id)
   where clock_out is null;
 
 -- Enforce one pending application per user/business to close concurrent-submit races.
