@@ -257,3 +257,16 @@ begin
  return v_app;
 end;
 $function$;
+
+-- Cover foreign-key columns reported by the Supabase performance advisor.
+create index if not exists attendance_store_id_idx on public.attendance(store_id);
+create index if not exists business_applications_organization_id_idx on public.business_applications(organization_id);
+create index if not exists business_applications_reviewed_by_idx on public.business_applications(reviewed_by);
+create index if not exists employee_invites_invited_by_idx on public.employee_invites(invited_by);
+create index if not exists inventory_movements_created_by_idx on public.inventory_movements(created_by);
+create index if not exists inventory_movements_store_id_idx on public.inventory_movements(store_id);
+create index if not exists payment_confirmations_reviewed_by_idx on public.payment_confirmations(reviewed_by);
+create index if not exists payment_confirmations_store_id_idx on public.payment_confirmations(store_id);
+create index if not exists sale_items_sale_id_idx on public.sale_items(sale_id);
+create index if not exists schedules_store_id_idx on public.schedules(store_id);
+create index if not exists shifts_store_id_idx on public.shifts(store_id);
