@@ -23,5 +23,19 @@ assert.match(hardening, /business_applications_one_pending_new_business_per_user
 assert.match(hardening, /business_applications_one_pending_upgrade_per_org_idx/);
 assert.match(hardening, /Produk duplikat tidak diperbolehkan dalam keranjang/);
 assert.match(hardening, /p_requested_plan is distinct from 'business'/);
+for (const index of [
+  "attendance_store_id_idx",
+  "business_applications_organization_id_idx",
+  "business_applications_reviewed_by_idx",
+  "employee_invites_invited_by_idx",
+  "inventory_movements_created_by_idx",
+  "inventory_movements_store_id_idx",
+  "payment_confirmations_reviewed_by_idx",
+  "payment_confirmations_store_id_idx",
+  "sale_items_sale_id_idx",
+  "schedules_store_id_idx",
+  "shifts_store_id_idx"
+]) assert.match(hardening, new RegExp(index));
+
 
 console.log("ACOPOS migration invariants: PASS");
