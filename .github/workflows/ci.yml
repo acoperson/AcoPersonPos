@@ -28,9 +28,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Type-check (report without blocking production build)
+      - name: Type-check
         run: npx tsc --noEmit
-        continue-on-error: true
 
       - name: Build production bundle
         run: npm run build
