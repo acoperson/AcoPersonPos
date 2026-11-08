@@ -26,7 +26,7 @@ function App() {
   const [busy,setBusy] = useState(false);
   const [notice,setNotice] = useState("");
   const [authLoading,setAuthLoading] = useState(true);
-  const [mobileMenu,setMobileMenu] = useState(false);
+  const [mobileMenu,setMobileMenu] = useState(false);\n  const [showBusinessForm,setShowBusinessForm] = useState(false);\n  const [businessName,setBusinessName] = useState("");\n  const [storeName,setStoreName] = useState("");
 
   useEffect(() => {
     if (!supabase) { setAuthLoading(false); return; }
@@ -63,7 +63,7 @@ function App() {
     const {error} = await supabase.auth.verifyOtp({email:email.trim(),token:otp.trim(),type:"email"});
     setBusy(false); if(error) setNotice(error.message);
   }
-  async function logout(){await supabase?.auth.signOut();setPage("overview");}
+  async function createBusiness(e:FormEvent) {\n    e.preventDefault(); if(!supabase) return;\n    setBusy(true); setNotice("");\n    const {data,error} = await supabase.rpc("create_business",{p_business_name:businessName.trim(),p_store_name:storeName.trim()});\n    setBusy(false);\n    if(error) { setNotice(error.message); return; }\n    setProfile(current=>({full_name:current?.full_name ?? user?.email?.split("@")[0] ?? "Owner",active_organization_id:data as string}));\n    setRole("owner"); setShowBusinessForm(false); setNotice("Bisnis dan toko pertama berhasil dibuat.");\n  }\n  async function logout(){await supabase?.auth.signOut();setPage("overview");}
   if(authLoading) return <div className="boot"><div className="brand-mark">A</div><span>Menyiapkan ACOPOS…</span></div>;
   if(user) return <div className="app-shell">
     <aside className={mobileMenu?"sidebar open":"sidebar"}>
@@ -76,7 +76,7 @@ function App() {
     <main className="dashboard-main">
       <header className="topbar"><button className="mobile-toggle" onClick={()=>setMobileMenu(!mobileMenu)}>☰</button><div className="crumb">Workspace <span>/</span> {title}</div><div className="top-actions"><span className="status-pill"><i/> Sistem siap</span><div className="avatar">{(profile?.full_name||user.email||"A").slice(0,1).toUpperCase()}</div></div></header>
       <section className="dash-content"><div className="page-heading"><div><div className="eyebrow">ACOPOS WORKSPACE</div><h1>{title}</h1><p>Semua operasional bisnis, terhubung dalam satu kendali.</p></div><span className="date-chip">{new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></div>
-        {!profile?.active_organization_id ? <div className="setup-panel"><div className="setup-icon">✧</div><h2>Workspace kamu siap dimulai.</h2><p>Akun berhasil masuk. Langkah berikutnya adalah membuat bisnis dan toko pertama agar data produk, kasir, karyawan, dan laporan dapat terhubung.</p><button className="primary-btn" onClick={()=>setNotice("Pembuatan workspace akan diaktifkan setelah modul onboarding bisnis selesai.")}>Siapkan bisnis pertama <span>→</span></button>{notice&&<small className="notice">{notice}</small>}</div> :
+        {!profile?.active_organization_id ? <div className="setup-panel"><div className="setup-icon">✧</div><h2>Workspace kamu siap dimulai.</h2><p>Akun berhasil masuk. Langkah berikutnya adalah membuat bisnis dan toko pertama agar data produk, kasir, karyawan, dan laporan dapat terhubung.</p>{!showBusinessForm ? <button className="primary-btn" onClick={()=>setShowBusinessForm(true)}>Siapkan bisnis pertama <span>→</span></button> : <form className="business-form" onSubmit={createBusiness}><label>NAMA BISNIS</label><input required minLength={2} value={businessName} onChange={e=>setBusinessName(e.target.value)} placeholder="Contoh: Toko Sejahtera"/><label>NAMA TOKO PERTAMA</label><input required minLength={2} value={storeName} onChange={e=>setStoreName(e.target.value)} placeholder="Contoh: Cabang Utama"/><button className="primary-btn" disabled={busy}>{busy?"Membuat workspace…":"Buat bisnis & toko"} <span>→</span></button></form>}{notice&&<small className="notice">{notice}</small>}</div> :
         <div className="empty-module"><span>✦</span><h2>{title} terhubung</h2><p>Fondasi workspace sudah aktif. Modul ini akan menampilkan data sesuai toko dan hak akses akun.</p></div>}
       </section>
     </main>
