@@ -86,7 +86,8 @@ export function Workspace({user,onLogout}:{user:User;onLogout:()=>void}) {
   }catch(e:any){setMessage(e.message||"Gagal memuat data.");}
   finally{setLoading(false);}
  },[user.id]);
- useEffect(()=>{refresh()},[refresh]);\n useEffect(()=>{if(!supabase||!storeId)return;supabase.from("store_payment_settings").select("*").eq("store_id",storeId).maybeSingle().then(({data})=>setPayment(data));},[storeId]);
+ useEffect(()=>{refresh()},[refresh]);
+ useEffect(()=>{if(!supabase||!storeId)return;supabase.from("store_payment_settings").select("*").eq("store_id",storeId).maybeSingle().then(({data})=>setPayment(data));},[storeId]);
  const activeStore=stores.find(s=>s.id===storeId)||stores[0];
  const stockFor=(productId:string)=>Number(inventory.find(i=>i.product_id===productId&&i.store_id===activeStore?.id)?.quantity ?? 0);
  const visibleNav=nav.filter(n=>n.roles.includes(role));
