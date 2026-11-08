@@ -20,24 +20,45 @@ begin
       'stores', (select count(*) from public.stores),
       'users', (select count(*) from auth.users),
       'sales', (select count(*) from public.sales),
-      'qr_orders', (select count(*) from public.qr_orders)
+      'qr_orders', (select count(*) from public.qr_orders),
+      'subscriptions', (select count(*) from public.subscriptions),
+      'active_subscriptions', (select count(*) from public.subscriptions where status = 'active')
     ),
     'organizations', coalesce((
       select jsonb_agg(
         jsonb_build_object(
-          'id', o.id,
-          'name', o.name,
-          'slug', o.slug,
-          'owner_email', u.email,
+          'id', o.id, 'name', o.name, 'slug', o.slug, 'owner_email', u.email,
           'created_at', o.created_at,
           'store_count', (select count(*) from public.stores s where s.organization_id = o.id),
           'member_count', (select count(*) from public.memberships m where m.organization_id = o.id),
           'plan_name', (select sub.plan_name from public.subscriptions sub where sub.organization_id = o.id limit 1),
           'subscription_status', (select sub.status from public.subscriptions sub where sub.organization_id = o.id limit 1)
-        )
-        order by o.created_at desc
+        ) order by o.created_at desc
       )
       from public.organizations o
+      left join auth.users u on u.id = o.owner_user_id
+    ), '[]'::jsonb),
+    'users', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', recent.id, 'email', recent.email, 'full_name', recent.full_name,
+        'created_at', recent.created_at, 'last_sign_in_at', recent.last_sign_in_at
+      ) order by recent.created_at desc)
+      from (
+        select u.id, u.email, p.full_name, u.created_at, u.last_sign_in_at
+        from auth.users u
+        left join public.profiles p on p.id = u.id
+        order by u.created_at desc
+        limit 100
+      ) recent
+    ), '[]'::jsonb),
+    'subscriptions', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'organization_id', o.id, 'organization_name', o.name, 'owner_email', u.email,
+        'plan_name', sub.plan_name, 'status', sub.status,
+        'starts_at', sub.starts_at, 'ends_at', sub.ends_at
+      ) order by sub.created_at desc)
+      from public.subscriptions sub
+      join public.organizations o on o.id = sub.organization_id
       left join auth.users u on u.id = o.owner_user_id
     ), '[]'::jsonb)
   ) into v_result;
