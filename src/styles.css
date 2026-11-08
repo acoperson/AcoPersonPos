@@ -21,3 +21,6 @@
 .otp-alt-btn{width:100%;display:flex;align-items:center;justify-content:center;padding:13px 14px;border:1px solid #bfc4c7;border-radius:4px;background:transparent;color:#30363b;font-size:10px;font-weight:700;cursor:pointer;transition:background .2s,border-color .2s}
 .otp-alt-btn:hover{background:#e3e5e5;border-color:#92999e}
 .login-card form .resend-btn{display:block;padding:5px 0;text-align:left}
+
+
+.pricing-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pricing-card-business{background:linear-gradient(145deg,#292e33,#171a1e)}.pricing-amount{display:block;font:600 20px var(--serif);margin:16px 0 8px;color:#e5e8ea}.pricing-card a{display:flex;align-items:center;justify-content:space-between}.application-actions{display:flex;gap:7px;flex-wrap:wrap}.application-actions .ui-btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}@media(max-width:650px){.pricing-cards{grid-template-columns:1fr}.pricing-card{padding:25px}}
