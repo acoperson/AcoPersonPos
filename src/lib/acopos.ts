@@ -67,16 +67,22 @@ export async function loadAcoWorkspace(userId: string) {
   const stores = (storeResult.data ?? []) as any[];
   const activeStore = stores.find((s) => s.id === chosen.store_id) ?? stores.find((s) => s.is_active) ?? stores[0];
   const storeId = activeStore?.id as string | undefined;
-  const [inventoryResult, profileResult, shiftResult, planCatalogResult, attendanceResult] = await Promise.all([
+  const [inventoryResult, profileResult, shiftResult, planCatalogResult, attendanceResult, customerResult, tabResult, reservationResult] = await Promise.all([
     storeId ? db.from("store_inventory").select("product_id,quantity,low_stock_threshold").eq("store_id", storeId) : Promise.resolve({ data: [], error: null } as any),
     db.from("profiles").select("id,full_name").in("id", (membershipResult.data ?? []).map((m: any) => m.user_id)),
     storeId ? db.from("shifts").select("id,status,cashier_user_id,opening_cash,opened_at").eq("store_id", storeId).eq("cashier_user_id", userId).eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle() : Promise.resolve({ data: null, error: null } as any),
     db.from("subscription_plans").select("code,name,price_idr,billing_period,is_paid,is_active,duration_days,branch_limit,features").eq("is_active", true).order("price_idr"),
-    storeId ? db.from("attendance").select("id,employee_user_id,clock_in,clock_out,status,note").eq("store_id", storeId).order("clock_in", { ascending: false }).limit(30) : Promise.resolve({ data: [], error: null } as any)
+    storeId ? db.from("attendance").select("id,employee_user_id,clock_in,clock_out,status,note").eq("store_id", storeId).order("clock_in", { ascending: false }).limit(30) : Promise.resolve({ data: [], error: null } as any),
+    storeId ? db.from("customers").select("id,full_name,phone,email,member_code,points,store_id,created_at").or("store_id.eq." + storeId + ",store_id.is.null").order("created_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null } as any),
+    storeId ? db.from("customer_tabs").select("id,customer_name,amount,paid_amount,due_date,status,created_at").eq("store_id", storeId).order("created_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null } as any),
+    storeId ? db.from("reservations").select("id,customer_name,customer_phone,reservation_at,party_size,status,notes").eq("store_id", storeId).order("reservation_at", { ascending: true }).limit(100) : Promise.resolve({ data: [], error: null } as any)
   ]);
   if (inventoryResult.error) throw inventoryResult.error;
   if (profileResult.error) throw profileResult.error;
   if (attendanceResult.error) throw attendanceResult.error;
+  if (customerResult.error) throw customerResult.error;
+  if (tabResult.error) throw tabResult.error;
+  if (reservationResult.error) throw reservationResult.error;
 
   const inventory = new Map((inventoryResult.data ?? []).map((r: any) => [r.product_id, r]));
   const profileMap = new Map((profileResult.data ?? []).map((p: any) => [p.id, p.full_name]));
@@ -109,6 +115,9 @@ export async function loadAcoWorkspace(userId: string) {
     orders,
     employees,
     attendance: attendanceResult.data ?? [],
+    customers: customerResult.data ?? [],
+    customerTabs: tabResult.data ?? [],
+    reservations: reservationResult.data ?? [],
     subscription: planResult.data,
     plans: planCatalogResult.data ?? [],
     activeShiftId: shiftResult.data?.id ?? null,
@@ -249,4 +258,56 @@ export async function markAttendance(input: { organizationId: string; storeId: s
   });
   if (error) throw error;
   return "clock_in";
+}
+
+export async function createCustomer(input: { organizationId: string; storeId: string; fullName: string; phone: string; email?: string }) {
+  const db = requireClient();
+  const { data, error } = await db.from("customers").insert({
+    organization_id: input.organizationId, store_id: input.storeId,
+    full_name: input.fullName.trim(), phone: input.phone.trim() || null,
+    email: input.email?.trim().toLowerCase() || null
+  }).select("id,full_name,phone,email,member_code,points,store_id,created_at").single();
+  if (error) throw error;
+  return data;
+}
+
+export async function createCustomerTab(input: { organizationId: string; storeId: string; customerName: string; amount: number; dueDate?: string; note?: string }) {
+  const db = requireClient();
+  const { data: userData } = await db.auth.getUser();
+  const { data, error } = await db.from("customer_tabs").insert({
+    organization_id: input.organizationId, store_id: input.storeId,
+    customer_name: input.customerName.trim(), amount: input.amount,
+    due_date: input.dueDate || null, note: input.note || null,
+    created_by: userData.user?.id
+  }).select("id,customer_name,amount,paid_amount,due_date,status,created_at").single();
+  if (error) throw error;
+  return data;
+}
+
+export async function recordCustomerTabPayment(tabId: string, amount: number, method: string) {
+  const db = requireClient();
+  const { data, error } = await db.rpc("record_customer_tab_payment", {
+    p_customer_tab_id: tabId, p_amount: amount, p_payment_method: method
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function createReservation(input: { organizationId: string; storeId: string; customerName: string; phone: string; reservationAt: string; partySize: number; notes?: string }) {
+  const db = requireClient();
+  const { data: userData } = await db.auth.getUser();
+  const { data, error } = await db.from("reservations").insert({
+    organization_id: input.organizationId, store_id: input.storeId,
+    customer_name: input.customerName.trim(), customer_phone: input.phone.trim() || null,
+    reservation_at: input.reservationAt, party_size: input.partySize,
+    notes: input.notes || null, created_by: userData.user?.id
+  }).select("id,customer_name,customer_phone,reservation_at,party_size,status,notes").single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateReservationStatus(id: string, status: string) {
+  const db = requireClient();
+  const { error } = await db.from("reservations").update({ status }).eq("id", id);
+  if (error) throw error;
 }
