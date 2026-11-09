@@ -399,3 +399,12 @@ export async function assignEmployeeStore(input: { organizationId: string; userI
   const { error } = await db.from("memberships").update({ store_id: input.storeId }).eq("organization_id", input.organizationId).eq("user_id", input.userId);
   if (error) throw error;
 }
+
+export async function adjustStoreStock(storeId: string, productId: string, delta: number, note: string) {
+  const db = requireClient();
+  const { data, error } = await db.rpc("adjust_store_stock", {
+    p_store_id: storeId, p_product_id: productId, p_delta: delta, p_note: note || null
+  });
+  if (error) throw error;
+  return data;
+}
