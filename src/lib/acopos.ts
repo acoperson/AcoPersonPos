@@ -24,7 +24,7 @@ function requireClient() {
   return supabase;
 }
 
-export async function loadAcoWorkspace(userId: string) {
+export async function loadAcoWorkspace(userId: string, requestedStoreId?: string) {
   const db = requireClient();
   const { data: profile, error: profileError } = await db
     .from("profiles")
@@ -65,7 +65,7 @@ export async function loadAcoWorkspace(userId: string) {
   if (membershipResult.error) throw membershipResult.error;
 
   const stores = (storeResult.data ?? []) as any[];
-  const activeStore = stores.find((s) => s.id === chosen.store_id) ?? stores.find((s) => s.is_active) ?? stores[0];
+  const activeStore = stores.find((s) => s.id === requestedStoreId) ?? stores.find((s) => s.id === chosen.store_id) ?? stores.find((s) => s.is_active) ?? stores[0];
   const storeId = activeStore?.id as string | undefined;
   const [inventoryResult, profileResult, shiftResult, planCatalogResult, attendanceResult, customerResult, tabResult, reservationResult] = await Promise.all([
     storeId ? db.from("store_inventory").select("product_id,quantity,low_stock_threshold").eq("store_id", storeId) : Promise.resolve({ data: [], error: null } as any),
