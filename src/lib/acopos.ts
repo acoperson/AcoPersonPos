@@ -408,3 +408,30 @@ export async function adjustStoreStock(storeId: string, productId: string, delta
   if (error) throw error;
   return data;
 }
+
+export async function uploadPublicPaymentProof(qrSlug: string, orderId: string, file: File) {
+  const db = requireClient();
+  if (!["image/jpeg","image/png","image/webp"].includes(file.type)) throw new Error("Bukti pembayaran harus JPG, PNG, atau WebP.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Ukuran bukti pembayaran maksimal 5 MB.");
+  const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = qrSlug + "/" + orderId + "/" + crypto.randomUUID() + "." + extension;
+  const { error: uploadError } = await db.storage.from("payment-proofs").upload(path, file, {
+    contentType: file.type,
+    upsert: false
+  });
+  if (uploadError) throw uploadError;
+  const { error: attachError } = await db.rpc("attach_public_qr_payment_proof", {
+    p_qr_slug: qrSlug,
+    p_order_id: orderId,
+    p_proof_path: path
+  });
+  if (attachError) throw attachError;
+  return path;
+}
+
+export async function createPaymentProofSignedUrl(path: string) {
+  const db = requireClient();
+  const { data, error } = await db.storage.from("payment-proofs").createSignedUrl(path, 300);
+  if (error) throw error;
+  return data.signedUrl;
+}
