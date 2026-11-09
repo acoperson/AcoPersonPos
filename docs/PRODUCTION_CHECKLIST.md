@@ -4,7 +4,7 @@
 The project already contains the core multi-tenant schema and RLS. Do not apply a second organizations/stores schema. The new additive migrations are already applied to the connected project and mirrored in \`supabase/migrations\`.
 
 - Existing tables include organizations, memberships, stores, products, store_inventory, sales, sale_items, shifts, attendance, schedules, QR orders, employee invites, business applications, subscriptions, and platform admins.
-- New additions include one-time activation codes, customer/member records, kasbon and payment ledger, reservations, and server-side branch-limit enforcement.
+- New additions include one-time activation codes, customer/member records, kasbon and payment ledger, reservations, a privacy-safe public order queue, server-side branch-limit enforcement, and composite tenant foreign keys for store-scoped records.
 - Review tenant isolation with at least two organizations and roles owner, admin, manager, cashier, and employee.
 - Test concurrent POS checkout to confirm inventory cannot be oversold.
 - Confirm the first platform administrator is explicitly registered in \`public.platform_admins\`.
@@ -39,5 +39,5 @@ The project already contains the core multi-tenant schema and RLS. Do not apply 
 - Test product creation, stock adjustments, POS checkout, void/refund policy, and receipt generation.
 - Test employee invites and store-scoped access.
 - Test customer/member, kasbon payments, and reservation workflows.
-- Test QR ordering, payment confirmation, and order queue visibility.
+- Test QR ordering, payment confirmation, rejected-payment stock restoration, and public order queue visibility.
 - Test mobile layouts, keyboard accessibility, and reduced-motion behavior.
