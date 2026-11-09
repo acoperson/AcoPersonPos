@@ -33,13 +33,13 @@ export async function loadAcoWorkspace(userId: string) {
     .maybeSingle();
   if (profileError) throw profileError;
 
-  const [memberResult, adminResult] = await Promise.all([
+  const [memberResult, adminCheck] = await Promise.all([
     db.from("memberships").select("organization_id,user_id,role,store_id").eq("user_id", userId),
-    Promise.resolve({ data: isPlatformAdmin, error: null })
+    db.rpc("is_platform_admin")
   ]);
   if (memberResult.error) throw memberResult.error;
   const memberships = memberResult.data ?? [];
-  const isPlatformAdmin = adminResult.data === true;
+  const isPlatformAdmin = adminCheck.data === true;
   if (!memberships.length) return { needsOnboarding: true as const, profile, isPlatformAdmin };
 
   const chosen = memberships.find((m: any) => m.organization_id === profile?.active_organization_id) ?? memberships[0];
@@ -51,13 +51,12 @@ export async function loadAcoWorkspace(userId: string) {
     .single();
   if (orgError) throw orgError;
 
-  const [storeResult, productResult, salesResult, membershipResult, planResult, adminResult] = await Promise.all([
+  const [storeResult, productResult, salesResult, membershipResult, planResult] = await Promise.all([
     db.from("stores").select("id,organization_id,name,address,qr_slug,is_active").eq("organization_id", organizationId).order("created_at"),
     db.from("products").select("id,name,sku,selling_price,is_available,category_id").eq("organization_id", organizationId).eq("is_available", true).order("name"),
     db.from("sales").select("id,receipt_number,total,payment_status,created_at,cashier_user_id").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(30),
     db.from("memberships").select("id,user_id,role,store_id").eq("organization_id", organizationId),
-    db.from("subscriptions").select("plan_name,status,starts_at,ends_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    db.rpc("is_platform_admin")
+    db.from("subscriptions").select("plan_name,status,starts_at,ends_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle()
   ]);
   if (storeResult.error) throw storeResult.error;
   if (productResult.error) throw productResult.error;
