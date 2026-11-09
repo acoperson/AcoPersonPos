@@ -311,3 +311,30 @@ export async function updateReservationStatus(id: string, status: string) {
   const { error } = await db.from("reservations").update({ status }).eq("id", id);
   if (error) throw error;
 }
+
+export async function getPublicStoreCatalog(qrSlug: string) {
+  const db = requireClient();
+  const { data, error } = await db.rpc("get_public_store_catalog", { p_qr_slug: qrSlug });
+  if (error) throw error;
+  return data;
+}
+
+export async function submitPublicQrOrder(input: { qrSlug: string; customerName: string; note: string; items: { product_id: string; quantity: number }[] }) {
+  const db = requireClient();
+  const { data, error } = await db.rpc("submit_public_qr_order", {
+    p_qr_slug: input.qrSlug,
+    p_customer_name: input.customerName,
+    p_customer_note: input.note || null,
+    p_items: input.items,
+    p_proof_image_path: null
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getPublicOrderQueue(qrSlug: string) {
+  const db = requireClient();
+  const { data, error } = await db.rpc("get_public_order_queue", { p_qr_slug: qrSlug });
+  if (error) throw error;
+  return data;
+}
