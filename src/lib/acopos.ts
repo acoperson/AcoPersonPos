@@ -67,14 +67,16 @@ export async function loadAcoWorkspace(userId: string) {
   const stores = (storeResult.data ?? []) as any[];
   const activeStore = stores.find((s) => s.id === chosen.store_id) ?? stores.find((s) => s.is_active) ?? stores[0];
   const storeId = activeStore?.id as string | undefined;
-  const [inventoryResult, profileResult, shiftResult, planCatalogResult] = await Promise.all([
+  const [inventoryResult, profileResult, shiftResult, planCatalogResult, attendanceResult] = await Promise.all([
     storeId ? db.from("store_inventory").select("product_id,quantity,low_stock_threshold").eq("store_id", storeId) : Promise.resolve({ data: [], error: null } as any),
     db.from("profiles").select("id,full_name").in("id", (membershipResult.data ?? []).map((m: any) => m.user_id)),
     storeId ? db.from("shifts").select("id,status,cashier_user_id,opening_cash,opened_at").eq("store_id", storeId).eq("cashier_user_id", userId).eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle() : Promise.resolve({ data: null, error: null } as any),
-    db.from("subscription_plans").select("code,name,price_idr,billing_period,is_paid,is_active,duration_days,branch_limit,features").eq("is_active", true).order("price_idr")
+    db.from("subscription_plans").select("code,name,price_idr,billing_period,is_paid,is_active,duration_days,branch_limit,features").eq("is_active", true).order("price_idr"),
+    storeId ? db.from("attendance").select("id,employee_user_id,clock_in,clock_out,status,note").eq("store_id", storeId).order("clock_in", { ascending: false }).limit(30) : Promise.resolve({ data: [], error: null } as any)
   ]);
   if (inventoryResult.error) throw inventoryResult.error;
   if (profileResult.error) throw profileResult.error;
+  if (attendanceResult.error) throw attendanceResult.error;
 
   const inventory = new Map((inventoryResult.data ?? []).map((r: any) => [r.product_id, r]));
   const profileMap = new Map((profileResult.data ?? []).map((p: any) => [p.id, p.full_name]));
@@ -106,6 +108,7 @@ export async function loadAcoWorkspace(userId: string) {
     products,
     orders,
     employees,
+    attendance: attendanceResult.data ?? [],
     subscription: planResult.data,
     plans: planCatalogResult.data ?? [],
     activeShiftId: shiftResult.data?.id ?? null,
@@ -226,4 +229,24 @@ export async function inviteEmployee(input: { organizationId: string; storeId: s
   }).select("id,email,role,status").single();
   if (error) throw error;
   return data;
+}
+
+export async function markAttendance(input: { organizationId: string; storeId: string; existingId?: string | null }) {
+  const db = requireClient();
+  const { data: userData, error: userError } = await db.auth.getUser();
+  if (userError) throw userError;
+  if (!userData.user) throw new Error("Sesi login tidak ditemukan.");
+  if (input.existingId) {
+    const { error } = await db.from("attendance").update({ clock_out: new Date().toISOString() }).eq("id", input.existingId);
+    if (error) throw error;
+    return "clock_out";
+  }
+  const { error } = await db.from("attendance").insert({
+    organization_id: input.organizationId,
+    store_id: input.storeId,
+    employee_user_id: userData.user.id,
+    status: "present"
+  });
+  if (error) throw error;
+  return "clock_in";
 }
