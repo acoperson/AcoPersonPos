@@ -67,7 +67,7 @@ export async function loadAcoWorkspace(userId: string, requestedStoreId?: string
   const stores = (storeResult.data ?? []) as any[];
   const activeStore = stores.find((s) => s.id === requestedStoreId) ?? stores.find((s) => s.id === chosen.store_id) ?? stores.find((s) => s.is_active) ?? stores[0];
   const storeId = activeStore?.id as string | undefined;
-  const [inventoryResult, profileResult, shiftResult, planCatalogResult, attendanceResult, customerResult, tabResult, reservationResult] = await Promise.all([
+  const [inventoryResult, profileResult, shiftResult, planCatalogResult, attendanceResult, customerResult, tabResult, reservationResult, qrOrderResult, paymentConfirmationResult] = await Promise.all([
     storeId ? db.from("store_inventory").select("product_id,quantity,low_stock_threshold").eq("store_id", storeId) : Promise.resolve({ data: [], error: null } as any),
     db.from("profiles").select("id,full_name").in("id", (membershipResult.data ?? []).map((m: any) => m.user_id)),
     storeId ? db.from("shifts").select("id,status,cashier_user_id,opening_cash,opened_at").eq("store_id", storeId).eq("cashier_user_id", userId).eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle() : Promise.resolve({ data: null, error: null } as any),
@@ -75,7 +75,9 @@ export async function loadAcoWorkspace(userId: string, requestedStoreId?: string
     storeId ? db.from("attendance").select("id,employee_user_id,clock_in,clock_out,status,note").eq("store_id", storeId).order("clock_in", { ascending: false }).limit(30) : Promise.resolve({ data: [], error: null } as any),
     storeId ? db.from("customers").select("id,full_name,phone,email,member_code,points,store_id,created_at").or("store_id.eq." + storeId + ",store_id.is.null").order("created_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null } as any),
     storeId ? db.from("customer_tabs").select("id,customer_name,amount,paid_amount,due_date,status,created_at").eq("store_id", storeId).order("created_at", { ascending: false }).limit(100) : Promise.resolve({ data: [], error: null } as any),
-    storeId ? db.from("reservations").select("id,customer_name,customer_phone,reservation_at,party_size,status,notes").eq("store_id", storeId).order("reservation_at", { ascending: true }).limit(100) : Promise.resolve({ data: [], error: null } as any)
+    storeId ? db.from("reservations").select("id,customer_name,customer_phone,reservation_at,party_size,status,notes").eq("store_id", storeId).order("reservation_at", { ascending: true }).limit(100) : Promise.resolve({ data: [], error: null } as any),
+    storeId ? db.from("qr_orders").select("id,order_number,customer_name,status,total,created_at").eq("store_id", storeId).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null } as any),
+    storeId ? db.from("payment_confirmations").select("id,order_id,status,proof_image_url,created_at").eq("store_id", storeId).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null } as any)
   ]);
   if (inventoryResult.error) throw inventoryResult.error;
   if (profileResult.error) throw profileResult.error;
@@ -83,6 +85,8 @@ export async function loadAcoWorkspace(userId: string, requestedStoreId?: string
   if (customerResult.error) throw customerResult.error;
   if (tabResult.error) throw tabResult.error;
   if (reservationResult.error) throw reservationResult.error;
+  if (qrOrderResult.error) throw qrOrderResult.error;
+  if (paymentConfirmationResult.error) throw paymentConfirmationResult.error;
 
   const inventory = new Map((inventoryResult.data ?? []).map((r: any) => [r.product_id, r]));
   const profileMap = new Map((profileResult.data ?? []).map((p: any) => [p.id, p.full_name]));
@@ -118,6 +122,8 @@ export async function loadAcoWorkspace(userId: string, requestedStoreId?: string
     customers: customerResult.data ?? [],
     customerTabs: tabResult.data ?? [],
     reservations: reservationResult.data ?? [],
+    qrOrders: qrOrderResult.data ?? [],
+    paymentConfirmations: paymentConfirmationResult.data ?? [],
     subscription: planResult.data,
     plans: planCatalogResult.data ?? [],
     activeShiftId: shiftResult.data?.id ?? null,
@@ -349,6 +355,20 @@ export async function createStore(input: { organizationId: string; name: string;
     address: input.address?.trim() || null,
     phone: input.phone?.trim() || null
   }).select("id,name,address,qr_slug,is_active").single();
+  if (error) throw error;
+  return data;
+}
+
+export async function reviewQrPayment(orderId: string, approved: boolean) {
+  const db = requireClient();
+  const { data, error } = await db.rpc("review_qr_payment", { p_order_id: orderId, p_approved: approved });
+  if (error) throw error;
+  return data;
+}
+
+export async function updateQrOrderStatus(orderId: string, status: "preparing" | "ready" | "completed" | "cancelled") {
+  const db = requireClient();
+  const { data, error } = await db.rpc("update_qr_order_status", { p_order_id: orderId, p_status: status });
   if (error) throw error;
   return data;
 }
