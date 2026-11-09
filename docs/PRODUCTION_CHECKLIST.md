@@ -1,44 +1,43 @@
-# acoPos production setup checklist
+# acoPos production checklist
 
-The feature branch contains a working front-end demo and the first database migrations. Complete these steps before storing real customer or business data.
+## Supabase project
+The project already contains the core multi-tenant schema and RLS. Do not apply a second organizations/stores schema. The new additive migrations are already applied to the connected project and mirrored in \`supabase/migrations\`.
 
-## 1. Supabase project
-- Create a Supabase project in the appropriate region.
-- Run migrations in order:
-  1. \`202611090001_initial_schema.sql\`
-  2. \`202611090002_signup_bootstrap.sql\`
-- Configure the project URL and publishable key in the app environment.
-- In Authentication > Providers > Email, disable "Confirm email" if the product policy is to allow registration without mandatory email verification.
-- Set the correct site URL and redirect URLs for \`https://acopos.my.id\` and the Netlify deploy preview host.
-- Review RLS policies with owner, manager, cashier, and cross-business test accounts.
+- Existing tables include organizations, memberships, stores, products, store_inventory, sales, sale_items, shifts, attendance, schedules, QR orders, employee invites, business applications, subscriptions, and platform admins.
+- New additions include one-time activation codes, customer/member records, kasbon and payment ledger, reservations, and server-side branch-limit enforcement.
+- Review tenant isolation with at least two organizations and roles owner, admin, manager, cashier, and employee.
+- Test concurrent POS checkout to confirm inventory cannot be oversold.
+- Confirm the first platform administrator is explicitly registered in \`public.platform_admins\`.
 
-## 2. Netlify
-Set these environment variables for production and deploy previews:
-- \`VITE_SUPABASE_URL\`
-- \`VITE_SUPABASE_PUBLISHABLE_KEY\`
+## Authentication
+- Disable **Confirm email** under Supabase Authentication → Providers → Email if the product must not require email verification.
+- Set Site URL and redirect URLs for production and Netlify deploy previews.
+- Test registration, login, logout, password recovery, employee invite claim, and session expiry.
 
-Build settings:
+## Netlify
 - Build command: \`npm run build\`
 - Publish directory: \`dist\`
+- Ensure \`VITE_SUPABASE_URL\` and \`VITE_SUPABASE_PUBLISHABLE_KEY\` exist for production and deploy previews.
+- Never add a Supabase service-role key to a \`VITE_\` variable or browser bundle.
 
-## 3. Platform administration
-The public client must never receive the Supabase service-role key. Implement trusted Edge Functions or server endpoints for:
-- Admin-only activation code generation.
-- One-time activation code validation and redemption.
-- Staff invitation and branch assignment.
-- Any privileged platform-wide support or moderation action.
+## Manual package activation
+- Admin creates codes through the admin-only \`admin_generate_activation_codes\` RPC.
+- Codes are returned once and stored as hashes.
+- Owners redeem with \`redeem_activation_code\`; code expiry, single-use status, role, and branch limits are checked server-side.
+- Initial plan prices are provisional and must be confirmed before production marketing.
 
-Activation code values should be generated with cryptographically secure randomness and stored as hashes. Redemption must run transactionally and verify expiry, status, plan limits, and business ownership.
+## Payments and hardware
+- The POS checkout uses the existing atomic \`complete_pos_sale\` RPC.
+- Public QR orders use the existing QR ordering RPCs.
+- QRIS settlement and bank reconciliation need payment-provider configuration and verified server-side webhooks.
+- Thermal printing and dedicated customer/TV displays require device/browser testing before being considered production-ready.
 
-## 4. Payments and hardware
-The interface includes payment-method selection and QRIS configuration placeholders. Before enabling actual payments, integrate a licensed payment provider and verify webhook signatures server-side. Printer, customer display, and TV queue output need device/browser testing and a hardware integration strategy.
-
-## 5. Release verification
-- Run \`npm run build\`.
-- Test registration, login, logout, password reset, and auth redirects.
-- Test tenant isolation with at least two separate businesses.
-- Test role permissions for ADMIN, OWNER BISNIS, MANAJER, and KARYAWAN.
-- Test branch and package limits server-side.
-- Test POS stock deduction, refunds/cancellations, and order consistency with concurrent cashiers.
-- Test QR ordering and all payment settlement states.
-- Test mobile layouts and keyboard accessibility.
+## Release verification
+- Run \`npm run build\` in CI.
+- Test owner onboarding and Free Store creation.
+- Test branch limits after each plan activation.
+- Test product creation, stock adjustments, POS checkout, void/refund policy, and receipt generation.
+- Test employee invites and store-scoped access.
+- Test customer/member, kasbon payments, and reservation workflows.
+- Test QR ordering, payment confirmation, and order queue visibility.
+- Test mobile layouts, keyboard accessibility, and reduced-motion behavior.
