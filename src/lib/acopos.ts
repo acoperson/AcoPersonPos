@@ -372,3 +372,9 @@ export async function updateQrOrderStatus(orderId: string, status: "preparing" |
   if (error) throw error;
   return data;
 }
+
+export async function assignEmployeeStore(input: { organizationId: string; userId: string; storeId: string | null }) {
+  const db = requireClient();
+  const { error } = await db.from("memberships").update({ store_id: input.storeId }).eq("organization_id", input.organizationId).eq("user_id", input.userId);
+  if (error) throw error;
+}
