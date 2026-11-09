@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Bell, Boxes,
   Building2, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight,
@@ -81,7 +81,7 @@ function App() {
     return found ? old.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i) : [...old, { product, qty: 1 }];
   });
   const notify = (s: string) => setNotice(s);
-  const submitAuth = async (e: React.FormEvent) => {
+  const submitAuth = async (e: FormEvent) => {
     e.preventDefault(); setBusy(true);
     try {
       if (supabase) {
@@ -100,7 +100,7 @@ function App() {
     finally { setBusy(false); }
   };
   const logout = async () => { if (supabase) await supabase.auth.signOut(); setLoggedIn(false); setView("overview"); notify("Anda telah keluar."); };
-  const saveProduct = (e: React.FormEvent) => {
+  const saveProduct = (e: FormEvent) => {
     e.preventDefault();
     const p: Product = { id: Date.now(), name: newProduct.name.trim(), category: newProduct.category, price: Number(newProduct.price), stock: Number(newProduct.stock), sku: newProduct.sku.trim() || "AC-" + Date.now().toString().slice(-4) };
     if (!p.name || p.price <= 0 || p.stock < 0) { notify("Lengkapi nama, harga, dan stok produk."); return; }
@@ -177,5 +177,5 @@ function OrderTable({orders}:{orders:Order[]}){return <div className="data-table
 function ProductTable({products,onDelete}:{products:Product[];onDelete:(id:number)=>void}){return <div className="data-table"><div className="table-head product-head"><span>Produk</span><span>SKU</span><span>Kategori</span><span>Harga</span><span>Stok</span><span>Aksi</span></div>{products.length===0?<div className="empty-row">Produk tidak ditemukan.</div>:products.map(p=><div className="table-row product-row" key={p.id}><span className="person-cell"><i className="product-thumb"><Package size={16}/></i><strong>{p.name}</strong></span><span>{p.sku}</span><span>{p.category}</span><strong>{money(p.price)}</strong><span className={p.stock<10?"stock-critical":""}>{p.stock} unit</span><span><button className="icon-button" onClick={()=>onDelete(p.id)} title="Hapus produk"><X size={15}/></button></span></div>)}</div>}
 function PriceCard({name,price,detail,features,featured=false,onChoose}:{name:string;price:string;detail:string;features:string[];featured?:boolean;onChoose:()=>void}){return <div className={"price-card "+(featured?"price-featured":"")}>{featured&&<span className="popular-label">MOST POPULAR</span>}<h3>{name}</h3><p>{detail}</p><div className="price-value">{price}<small>{price==="Gratis"?"":" / 30 hari"}</small></div><button className={featured?"btn btn-primary btn-full":"btn btn-outline btn-full"} onClick={onChoose}>Pilih paket <ArrowRight size={15}/></button><div className="price-features">{features.map(f=><span key={f}><Check size={14}/>{f}</span>)}</div></div>}
 function Faq({q,a}:{q:string;a:string}){const [open,setOpen]=useState(false);return <div className={"faq-item "+(open?"faq-open":"")}><button onClick={()=>setOpen(!open)}><strong>{q}</strong><Plus size={18}/></button>{open&&<p>{a}</p>}</div>}
-function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}><div className="modal-card"><div className="modal-head"><h3>{title}</h3><button className="icon-button" onClick={onClose}><X size={18}/></button></div>{children}</div></div>}
+function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}><div className="modal-card"><div className="modal-head"><h3>{title}</h3><button className="icon-button" onClick={onClose}><X size={18}/></button></div>{children}</div></div>}
 export default App;
