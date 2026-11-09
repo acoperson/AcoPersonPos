@@ -338,3 +338,17 @@ export async function getPublicOrderQueue(qrSlug: string) {
   if (error) throw error;
   return data;
 }
+
+export async function createStore(input: { organizationId: string; name: string; address?: string; phone?: string }) {
+  const db = requireClient();
+  const code = "STORE-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+  const { data, error } = await db.from("stores").insert({
+    organization_id: input.organizationId,
+    name: input.name.trim(),
+    code,
+    address: input.address?.trim() || null,
+    phone: input.phone?.trim() || null
+  }).select("id,name,address,qr_slug,is_active").single();
+  if (error) throw error;
+  return data;
+}
