@@ -33,6 +33,7 @@ export async function loadAcoWorkspace(userId: string) {
     .maybeSingle();
   if (profileError) throw profileError;
 
+  await db.rpc("claim_employee_invites");
   const [memberResult, adminCheck] = await Promise.all([
     db.from("memberships").select("organization_id,user_id,role,store_id").eq("user_id", userId),
     db.rpc("is_platform_admin")
@@ -207,6 +208,22 @@ export async function generateActivationCodes(planCode: string, quantity: number
     p_expires_at: expiresAt,
     p_note: note
   });
+  if (error) throw error;
+  return data;
+}
+
+export async function inviteEmployee(input: { organizationId: string; storeId: string; email: string; role: "manager" | "cashier" | "employee" }) {
+  const db = requireClient();
+  const { data: userData, error: userError } = await db.auth.getUser();
+  if (userError) throw userError;
+  if (!userData.user) throw new Error("Sesi login tidak ditemukan.");
+  const { data, error } = await db.from("employee_invites").insert({
+    organization_id: input.organizationId,
+    store_id: input.storeId,
+    email: input.email.trim().toLowerCase(),
+    role: input.role,
+    invited_by: userData.user.id
+  }).select("id,email,role,status").single();
   if (error) throw error;
   return data;
 }
