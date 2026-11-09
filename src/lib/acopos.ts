@@ -33,12 +33,14 @@ export async function loadAcoWorkspace(userId: string) {
     .maybeSingle();
   if (profileError) throw profileError;
 
-  const { data: memberships, error: memberError } = await db
-    .from("memberships")
-    .select("organization_id,user_id,role,store_id")
-    .eq("user_id", userId);
-  if (memberError) throw memberError;
-  if (!memberships?.length) return { needsOnboarding: true as const, profile, isPlatformAdmin: false };
+  const [memberResult, adminResult] = await Promise.all([
+    db.from("memberships").select("organization_id,user_id,role,store_id").eq("user_id", userId),
+    Promise.resolve({ data: isPlatformAdmin, error: null })
+  ]);
+  if (memberResult.error) throw memberResult.error;
+  const memberships = memberResult.data ?? [];
+  const isPlatformAdmin = adminResult.data === true;
+  if (!memberships.length) return { needsOnboarding: true as const, profile, isPlatformAdmin };
 
   const chosen = memberships.find((m: any) => m.organization_id === profile?.active_organization_id) ?? memberships[0];
   const organizationId = chosen.organization_id as string;
@@ -107,7 +109,7 @@ export async function loadAcoWorkspace(userId: string) {
     subscription: planResult.data,
     plans: planCatalogResult.data ?? [],
     activeShiftId: shiftResult.data?.id ?? null,
-    isPlatformAdmin: adminResult.data === true
+    isPlatformAdmin
   };
 }
 
