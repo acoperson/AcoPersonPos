@@ -8,9 +8,10 @@ import {
   Store, Ticket, TrendingUp, Users, Wallet, X, Zap
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
+import { loadAcoWorkspace, createFreeBusiness, createProductForStore, completeSale, redeemBusinessActivation, generateActivationCodes } from "./lib/acopos";
 
-type View = "overview" | "pos" | "products" | "orders" | "branches" | "employees" | "reports" | "qr" | "members" | "settings" | "activation";
-type Product = { id: number; name: string; category: string; price: number; stock: number; sku: string };
+type View = "overview" | "onboarding" | "admin" | "pos" | "products" | "orders" | "branches" | "employees" | "reports" | "qr" | "members" | "settings" | "activation";
+type Product = { id: string | number; name: string; category: string; price: number; stock: number; sku: string };
 type Order = { id: string; customer: string; total: number; status: string; time: string; items: number };
 const initialProducts: Product[] = [
   { id: 1, name: "Signature Coffee", category: "Beverages", price: 28000, stock: 42, sku: "AC-001" },
@@ -31,7 +32,7 @@ const money = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency",
 const navGroups = [
   { label: "WORKSPACE", items: [{ id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "pos", label: "Kasir / POS", icon: ShoppingCart }, { id: "orders", label: "Pesanan", icon: ShoppingBag }, { id: "products", label: "Produk & Stok", icon: Package }] },
   { label: "BUSINESS", items: [{ id: "branches", label: "Cabang", icon: Building2 }, { id: "employees", label: "Karyawan", icon: Users }, { id: "reports", label: "Laporan", icon: BarChart3 }, { id: "members", label: "Pelanggan & Member", icon: Gift }, { id: "qr", label: "QR Menu", icon: QrCode }] },
-  { label: "SYSTEM", items: [{ id: "activation", label: "Kode Aktivasi", icon: Ticket }, { id: "settings", label: "Pengaturan", icon: Settings }] }
+  { label: "SYSTEM", items: [{ id: "activation", label: "Kode Aktivasi", icon: Ticket }, { id: "admin", label: "Admin Panel", icon: ShieldCheck }, { id: "settings", label: "Pengaturan", icon: Settings }] }
 ];
 function readLocal<T,>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
@@ -59,15 +60,55 @@ function App() {
   const [authPassword, setAuthPassword] = useState("");
   const [authName, setAuthName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
+  const [stores, setStores] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [businessName, setBusinessName] = useState("");
+  const [onboardingStoreName, setOnboardingStoreName] = useState("Toko Utama");
+  const [adminOverview, setAdminOverview] = useState<any>(null);
+  const [activationPlan, setActivationPlan] = useState("regular");
+  const [activationQuantity, setActivationQuantity] = useState("1");
+  const [generatedCodes, setGeneratedCodes] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
 
   useEffect(() => { localStorage.setItem("acopos-products", JSON.stringify(products)); }, [products]);
   useEffect(() => { localStorage.setItem("acopos-orders", JSON.stringify(orders)); }, [orders]);
   useEffect(() => { const t = window.setInterval(() => setClock(new Date()), 1000); return () => window.clearInterval(t); }, []);
+  const refreshWorkspace = async () => {
+    if (!supabase) return;
+    setWorkspaceLoading(true);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!userData.user) return;
+      const data = await loadAcoWorkspace(userData.user.id);
+      if (data.needsOnboarding) { setView("onboarding"); setIsPlatformAdmin(data.isPlatformAdmin); return; }
+      setActiveOrgId(data.organizationId);
+      setActiveStoreId(data.activeStore?.id ?? null);
+      setStoreName(data.activeStore?.name ?? data.organization?.name ?? "Toko");
+      setBusinessName(data.organization?.name ?? "");
+      const roleMap: Record<string,string> = { owner: "OWNER BISNIS", admin: "ADMIN", manager: "MANAJER", cashier: "KARYAWAN", employee: "KARYAWAN" };
+      const currentMembership = data.employees.find((m:any) => m.id === userData.user?.id);
+      setRole(roleMap[currentMembership?.role ?? "owner"] ?? "KARYAWAN");
+      setStores(data.stores); setEmployees(data.employees); setIsPlatformAdmin(data.isPlatformAdmin);
+      setProducts(data.products); setOrders(data.orders); setPlans(data.plans);
+      setView(current => current === "onboarding" ? "overview" : current);
+    } catch (err) { notify(err instanceof Error ? err.message : "Gagal memuat workspace."); }
+    finally { setWorkspaceLoading(false); }
+  };
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => { if (data.session) setLoggedIn(true); });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setLoggedIn(Boolean(session)));
-    return () => data.subscription.unsubscribe();
+    let alive = true;
+    supabase.auth.getSession().then(({ data }) => { if (alive && data.session) { setLoggedIn(true); window.setTimeout(() => { if (alive) void refreshWorkspace(); }, 0); } });
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(Boolean(session));
+      if (session) window.setTimeout(() => { if (alive) void refreshWorkspace(); }, 0);
+      else { setActiveOrgId(null); setActiveStoreId(null); setStores([]); setEmployees([]); }
+    });
+    return () => { alive = false; data.subscription.unsubscribe(); };
   }, []);
   useEffect(() => { if (notice) { const t = window.setTimeout(() => setNotice(""), 3200); return () => window.clearTimeout(t); } }, [notice]);
 
@@ -75,7 +116,7 @@ function App() {
   const filteredProducts = useMemo(() => products.filter(p => (category === "Semua" || p.category === category) && (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))), [products, category, search]);
   const cartCount = cart.reduce((n, item) => n + item.qty, 0);
   const cartTotal = cart.reduce((n, item) => n + item.product.price * item.qty, 0);
-  const pageTitle = navGroups.flatMap(g => g.items).find(i => i.id === view)?.label ?? "Overview";
+  const pageTitle = navGroups.flatMap(g => g.items).find(i => i.id === view)?.label ?? (view === "onboarding" ? "Pengaturan bisnis" : "Overview");
   const addToCart = (product: Product) => setCart(old => {
     const found = old.find(i => i.product.id === product.id);
     return found ? old.map(i => i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i) : [...old, { product, qty: 1 }];
@@ -89,8 +130,10 @@ function App() {
           ? await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { data: { full_name: authName, requested_role: "OWNER BISNIS" } } })
           : await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
         if (result.error) throw result.error;
-        notify(modal === "register" ? "Pendaftaran berhasil. Selesaikan pengaturan bisnis Anda." : "Berhasil masuk ke acoPos.");
-        if (modal === "login") setLoggedIn(true);
+        if (modal === "register") {
+          if (result.data.session) { setLoggedIn(true); notify("Akun berhasil dibuat. Lanjutkan pengaturan bisnis."); window.setTimeout(() => void refreshWorkspace(), 0); }
+          else notify("Akun dibuat. Jika konfirmasi email masih aktif di Supabase, silakan verifikasi lalu masuk.");
+        } else { setLoggedIn(true); notify("Berhasil masuk ke acoPos."); window.setTimeout(() => void refreshWorkspace(), 0); }
       } else {
         if (!authEmail || authPassword.length < 6) throw new Error("Masukkan email dan password minimal 6 karakter.");
         setLoggedIn(true); notify("Mode demo aktif. Hubungkan Supabase untuk autentikasi produksi.");
@@ -99,18 +142,48 @@ function App() {
     } catch (err) { notify(err instanceof Error ? err.message : "Terjadi kesalahan autentikasi."); }
     finally { setBusy(false); }
   };
-  const logout = async () => { if (supabase) await supabase.auth.signOut(); setLoggedIn(false); setView("overview"); notify("Anda telah keluar."); };
-  const saveProduct = (e: FormEvent) => {
+  const logout = async () => { if (supabase) await supabase.auth.signOut(); setLoggedIn(false); setActiveOrgId(null); setActiveStoreId(null); setView("overview"); notify("Anda telah keluar."); };
+  const saveProduct = async (e: FormEvent) => {
     e.preventDefault();
     const p: Product = { id: Date.now(), name: newProduct.name.trim(), category: newProduct.category, price: Number(newProduct.price), stock: Number(newProduct.stock), sku: newProduct.sku.trim() || "AC-" + Date.now().toString().slice(-4) };
     if (!p.name || p.price <= 0 || p.stock < 0) { notify("Lengkapi nama, harga, dan stok produk."); return; }
-    setProducts(old => [p, ...old]); setNewProduct({ name: "", category: "Beverages", price: "", stock: "", sku: "" }); setModal(null); notify("Produk berhasil ditambahkan.");
+    try {
+      if (supabase && activeOrgId && activeStoreId) { await createProductForStore({ organizationId: activeOrgId, storeId: activeStoreId, name: p.name, sku: p.sku, price: p.price, stock: p.stock }); await refreshWorkspace(); }
+      else setProducts(old => [p, ...old]);
+      setNewProduct({ name: "", category: "Beverages", price: "", stock: "", sku: "" }); setModal(null); notify("Produk berhasil ditambahkan.");
+    } catch (err) { notify(err instanceof Error ? err.message : "Gagal menyimpan produk."); }
   };
-  const checkout = () => {
+  const checkout = async () => {
     if (!cart.length) return;
-    const order: Order = { id: "AC-" + Date.now().toString().slice(-6), customer: customer.trim() || "Walk-in Customer", total: cartTotal, status: "Selesai", time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }), items: cartCount };
-    setOrders(old => [order, ...old]); setProducts(old => old.map(p => { const line = cart.find(c => c.product.id === p.id); return line ? { ...p, stock: Math.max(0, p.stock - line.qty) } : p; }));
-    setCart([]); setCustomer(""); setModal(null); setView("orders"); notify("Transaksi berhasil disimpan di perangkat ini.");
+    try {
+      if (supabase && activeStoreId) {
+        const method = payment === "Tunai" ? "cash" : payment === "QRIS" ? "qris" : payment === "Kartu debit" ? "debit" : "bank_transfer";
+        const result = await completeSale({ storeId: activeStoreId, items: cart.map(line => ({ product_id: String(line.product.id), quantity: line.qty })), paymentMethod: method, note: customer.trim() || undefined });
+        notify("Transaksi berhasil: " + (result?.receipt_number ?? "tersimpan")); await refreshWorkspace();
+      } else {
+        const order: Order = { id: "AC-" + Date.now().toString().slice(-6), customer: customer.trim() || "Walk-in Customer", total: cartTotal, status: "Selesai", time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }), items: cartCount };
+        setOrders(old => [order, ...old]); setProducts(old => old.map(p => { const line = cart.find(c => c.product.id === p.id); return line ? { ...p, stock: Math.max(0, p.stock - line.qty) } : p; }));
+        notify("Transaksi demo tersimpan di browser ini.");
+      }
+      setCart([]); setCustomer(""); setModal(null); setView("orders");
+    } catch (err) { notify(err instanceof Error ? err.message : "Transaksi gagal diproses."); }
+  };
+  const submitOnboarding = async (e: FormEvent) => {
+    e.preventDefault(); setBusy(true);
+    try {
+      if (supabase) { await createFreeBusiness(businessName.trim(), onboardingStoreName.trim()); notify("Bisnis dan toko utama berhasil dibuat."); await refreshWorkspace(); }
+      else { setLoggedIn(true); setView("overview"); notify("Workspace demo siap digunakan."); }
+    } catch (err) { notify(err instanceof Error ? err.message : "Gagal membuat bisnis."); }
+    finally { setBusy(false); }
+  };
+  const submitActivation = async () => {
+    if (!supabase || !activeOrgId) { notify("Masuk dan pilih bisnis terlebih dahulu."); return; }
+    try { const result = await redeemBusinessActivation(activationCode, activeOrgId); notify("Paket " + (result?.plan_name ?? "berhasil") + " berhasil diaktifkan."); setActivationCode(""); await refreshWorkspace(); }
+    catch (err) { notify(err instanceof Error ? err.message : "Kode aktivasi gagal diproses."); }
+  };
+  const submitGeneratedCodes = async () => {
+    try { const rows = await generateActivationCodes(activationPlan, Number(activationQuantity), null, "Dibuat dari Admin Panel"); setGeneratedCodes(rows ?? []); notify("Kode aktivasi berhasil dibuat. Simpan kode ini karena hanya ditampilkan sekali."); }
+    catch (err) { notify(err instanceof Error ? err.message : "Gagal membuat kode aktivasi."); }
   };
   const chooseView = (id: string) => { setView(id as View); setMobileNav(false); };
   const openLogin = () => setModal("login");
