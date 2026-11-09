@@ -36,7 +36,7 @@ The project already contains the core multi-tenant schema and RLS. Do not apply 
 - Run \`npm run build\` in CI.
 - Test owner onboarding and Free Store creation.
 - Test branch limits after each plan activation.
-- Test product creation, stock adjustments, POS checkout, void/refund policy, and receipt generation.
+- Test product creation, stock adjustments, POS checkout, void/refund policy, 80 mm browser receipt printing, and the target thermal printer.
 - Test employee invites and store-scoped access.
 - Test customer/member, kasbon payments, and reservation workflows.
 - Test QR ordering, payment confirmation, rejected-payment stock restoration, and public order queue visibility.
