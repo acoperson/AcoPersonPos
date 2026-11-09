@@ -52,16 +52,18 @@ export async function loadAcoWorkspace(userId: string, requestedStoreId?: string
     .single();
   if (orgError) throw orgError;
 
-  const [storeResult, productResult, salesResult, membershipResult, planResult] = await Promise.all([
+  const [storeResult, productResult, salesResult, membershipResult, planResult, categoryResult] = await Promise.all([
     db.from("stores").select("id,organization_id,name,address,qr_slug,is_active").eq("organization_id", organizationId).order("created_at"),
     db.from("products").select("id,name,sku,selling_price,is_available,category_id").eq("organization_id", organizationId).eq("is_available", true).order("name"),
     db.from("sales").select("id,receipt_number,total,payment_status,created_at,cashier_user_id").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(30),
     db.from("memberships").select("id,user_id,role,store_id").eq("organization_id", organizationId),
-    db.from("subscriptions").select("plan_name,status,starts_at,ends_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle()
+    db.from("subscriptions").select("plan_name,status,starts_at,ends_at").eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    db.from("categories").select("id,name").eq("organization_id", organizationId).order("sort_order")
   ]);
   if (storeResult.error) throw storeResult.error;
   if (productResult.error) throw productResult.error;
   if (salesResult.error) throw salesResult.error;
+  if (categoryResult.error) throw categoryResult.error;
   if (membershipResult.error) throw membershipResult.error;
 
   const stores = (storeResult.data ?? []) as any[];
@@ -89,10 +91,11 @@ export async function loadAcoWorkspace(userId: string, requestedStoreId?: string
   if (paymentConfirmationResult.error) throw paymentConfirmationResult.error;
 
   const inventory = new Map((inventoryResult.data ?? []).map((r: any) => [r.product_id, r]));
+  const categoryMap = new Map((categoryResult.data ?? []).map((c: any) => [c.id, c.name]));
   const profileMap = new Map((profileResult.data ?? []).map((p: any) => [p.id, p.full_name]));
   const products: WorkspaceProduct[] = (productResult.data ?? []).map((p: any) => {
     const stock = inventory.get(p.id) as any;
-    return { id: p.id, name: p.name, category: p.category_id ? "Produk" : "Umum", price: Number(p.selling_price), stock: Number(stock?.quantity ?? 0), sku: p.sku ?? "" };
+    return { id: p.id, name: p.name, category: categoryMap.get(p.category_id) ?? "Umum", price: Number(p.selling_price), stock: Number(stock?.quantity ?? 0), sku: p.sku ?? "" };
   });
   const orders: WorkspaceOrder[] = (salesResult.data ?? []).map((s: any) => ({
     id: s.receipt_number,
@@ -144,11 +147,21 @@ export async function createFreeBusiness(businessName: string, storeName: string
 }
 
 export async function createProductForStore(input: {
-  organizationId: string; storeId: string; name: string; sku: string; price: number; stock: number;
+  organizationId: string; storeId: string; name: string; category: string; sku: string; price: number; stock: number;
 }) {
   const db = requireClient();
+  let categoryId: string | null = null;
+  const { data: existingCategory, error: categoryReadError } = await db.from("categories").select("id").eq("organization_id", input.organizationId).eq("name", input.category).maybeSingle();
+  if (categoryReadError) throw categoryReadError;
+  if (existingCategory) categoryId = existingCategory.id;
+  else {
+    const { data: createdCategory, error: categoryCreateError } = await db.from("categories").insert({ organization_id: input.organizationId, name: input.category }).select("id").single();
+    if (categoryCreateError) throw categoryCreateError;
+    categoryId = createdCategory.id;
+  }
   const { data: product, error } = await db.from("products").insert({
     organization_id: input.organizationId,
+    category_id: categoryId,
     name: input.name,
     sku: input.sku || null,
     selling_price: input.price,
@@ -165,6 +178,14 @@ export async function createProductForStore(input: {
     low_stock_threshold: 0
   });
   if (inventoryError) throw inventoryError;
+  if (input.stock > 0) {
+    const { data: userData } = await db.auth.getUser();
+    const { error: movementError } = await db.from("inventory_movements").insert({
+      organization_id: input.organizationId, store_id: input.storeId, product_id: product.id,
+      movement_type: "in", quantity: input.stock, note: "Stok awal produk", created_by: userData.user?.id
+    });
+    if (movementError) throw movementError;
+  }
   return product;
 }
 
