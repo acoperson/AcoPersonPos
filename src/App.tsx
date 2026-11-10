@@ -167,9 +167,9 @@ function App() {
       if (alive && data.session) window.setTimeout(() => { if (alive) void beginPinChallenge(); }, 0);
     });
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setLoggedIn(Boolean(session));
       if (session) window.setTimeout(() => { if (alive) void beginPinChallenge(); }, 0);
       else {
+        setLoggedIn(false);
         setPinGate(false); setPinSetupNeeded(false); setPinInput(""); setPinConfirm("");
         setActiveOrgId(null); setActiveStoreId(null); setStores([]); setEmployees([]);
       }
