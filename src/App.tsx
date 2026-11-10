@@ -208,6 +208,7 @@ function App() {
         if (authPassword.length < 8) throw new Error("Password minimal 8 karakter.");
         if (registerMode === "owner" && !authStoreName.trim()) throw new Error("Nama toko wajib diisi.");
         const registration = await supabase.functions.invoke("acopos-register", {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
           body: {
             email: authEmail.trim().toLowerCase(),
             password: authPassword,
