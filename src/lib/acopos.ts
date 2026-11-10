@@ -138,11 +138,12 @@ export async function createFreeBusiness(businessName: string, storeName: string
   return registerOwnerWithActivationCode(storeName || businessName, "");
 }
 
-export async function registerOwnerWithActivationCode(storeName: string, activationCode: string) {
+export async function registerOwnerWithActivationCode(storeName: string, activationCode: string, expectedPlanCode: string) {
   const db = requireClient();
   const { data, error } = await db.rpc("register_owner_with_activation_code", {
     p_store_name: storeName,
-    p_activation_code: activationCode
+    p_activation_code: activationCode,
+    p_expected_plan_code: expectedPlanCode
   });
   if (error) throw error;
   return data;
