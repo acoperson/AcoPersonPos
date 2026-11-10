@@ -36,7 +36,7 @@ const navGroups = [
 ];
 const ownerNavGroups = [
   { label: "BUSINESS CONTROL", items: [{ id: "business", label: "Ringkasan Bisnis", icon: LayoutDashboard }, { id: "branches", label: "Manajemen Cabang", icon: Building2 }, { id: "employees", label: "Tim & Karyawan", icon: Users }, { id: "reports", label: "Analitik Bisnis", icon: BarChart3 }] },
-  { label: "PENGELOLAAN", items: [{ id: "activation", label: "Paket & Aktivasi", icon: Ticket }, { id: "settings", label: "Pengaturan Bisnis", icon: Settings }] },
+  { label: "PENGELOLAAN", items: [{ id: "activation", label: "Paket & Aktivasi", icon: Ticket }, { id: "settings", label: "Pengaturan Bisnis", icon: Settings }, { id: "admin", label: "Admin Panel", icon: ShieldCheck }] },
   { label: "STORE WORKSPACE", items: [{ id: "overview", label: "Masuk Workspace", icon: Store }, { id: "pos", label: "Kasir / POS", icon: ShoppingCart }, { id: "orders", label: "Pesanan", icon: ShoppingBag }, { id: "products", label: "Produk & Stok", icon: Package }, { id: "attendance", label: "Kehadiran", icon: CalendarDays }, { id: "kasbon", label: "Kasbon", icon: Wallet }, { id: "reservations", label: "Reservasi", icon: Clock3 }, { id: "members", label: "Pelanggan & Member", icon: Gift }, { id: "qr", label: "QR Menu", icon: QrCode }] }
 ];
 function readLocal<T,>(key: string, fallback: T): T {
