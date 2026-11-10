@@ -10,3 +10,19 @@
 
 .receipt-print{display:none}.row-actions{display:flex;gap:8px;align-items:center}.receipt-brand{font-size:18px;font-weight:800;letter-spacing:1px;text-align:center}.receipt-print h2{font-size:14px;text-align:center;margin:8px 0}.receipt-print p{font-size:10px;text-align:center;margin:4px 0}.receipt-line{display:flex;justify-content:space-between;gap:8px;font-size:10px;padding:4px 0}.receipt-total{font-size:13px;font-weight:800}.receipt-print hr{border:0;border-top:1px dashed #888;margin:8px 0}
 @media print{@page{size:80mm auto;margin:3mm}body{background:#fff!important}body *{visibility:hidden!important}.receipt-print,.receipt-print *{visibility:visible!important}.receipt-print{display:block!important;position:absolute;left:0;top:0;width:74mm;padding:0;background:#fff!important;color:#111!important;font-family:monospace!important}.receipt-print *{color:#111!important}}
+
+/* Owner Business Control is a separate management surface from Store Workspace. */
+.business-control-heading{margin-top:30px;align-items:flex-end}
+.business-control-heading h2{font-size:20px;margin:5px 0}
+.business-control-heading p{margin:0;color:#969ba5;font-size:12px}
+.owner-branch-tile{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.owner-branch-tile h3{margin:2px 0 0}
+.owner-branch-tile>p{margin:0;min-height:18px}
+.owner-branch-meta{display:flex;flex-wrap:wrap;gap:12px;color:#a5aab3;font-size:10px;margin:4px 0 8px}
+.owner-branch-tile>.btn{margin-top:auto}
+.owner-control-bottom{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.owner-control-panel{padding:20px}
+.owner-control-panel h3{font-size:16px;margin:8px 0}
+.owner-control-panel p{font-size:12px;color:#9da2ac;margin:0 0 16px}
+.workspace-switch strong{display:block;font-size:12px;color:#f1f2f4}
+@media(max-width:760px){.owner-control-bottom{grid-template-columns:1fr}.business-control-heading{align-items:flex-start;flex-direction:column;gap:12px}.owner-branch-meta{font-size:9px}}
