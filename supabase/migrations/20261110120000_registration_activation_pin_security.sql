@@ -212,7 +212,7 @@ begin
   select * into v_row from public.user_security_pins where user_id=auth.uid() for update;
   if not found then raise exception 'PIN belum dibuat'; end if;
   if v_row.locked_until is not null and v_row.locked_until > now() then
-    raise exception 'Terlalu banyak percobaan. Coba lagi setelah ' || to_char(v_row.locked_until,'HH24:MI');
+    raise exception using message = 'Terlalu banyak percobaan. Coba lagi setelah ' || to_char(v_row.locked_until,'HH24:MI');
   end if;
   if v_row.pin_hash = encode(extensions.digest(convert_to(v_row.pin_salt || ':' || coalesce(p_pin,''),'UTF8'),'sha256'),'hex') then
     update public.user_security_pins set failed_attempts=0,locked_until=null,updated_at=now() where user_id=auth.uid();
