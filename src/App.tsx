@@ -205,22 +205,47 @@ function App() {
       if (!supabase) throw new Error("Autentikasi produksi belum terhubung ke Supabase.");
       if (modal === "register") {
         if (!authName.trim() || !authActivationCode.trim()) throw new Error("Nama dan kode aktivasi wajib diisi.");
+        if (authPassword.length < 8) throw new Error("Password minimal 8 karakter.");
         if (registerMode === "owner" && !authStoreName.trim()) throw new Error("Nama toko wajib diisi.");
-        const result = await supabase.auth.signUp({
-          email: authEmail.trim().toLowerCase(),
-          password: authPassword,
-          options: { data: { full_name: authName.trim(), requested_role: registerMode === "owner" ? "OWNER BISNIS" : "KARYAWAN" } }
+        const registration = await supabase.functions.invoke("acopos-register", {
+          body: {
+            email: authEmail.trim().toLowerCase(),
+            password: authPassword,
+            full_name: authName.trim(),
+            registration_type: registerMode,
+            activation_code: authActivationCode.trim(),
+            store_name: authStoreName.trim(),
+            plan_code: registerPlanCode
+          }
         });
-        if (result.error) throw result.error;
-        if (!result.data.session) {
-          notify("Akun belum mendapat sesi login. Nonaktifkan Confirm email di Supabase Auth agar pendaftaran dengan kode dapat langsung dilanjutkan. Kode belum digunakan.");
-          return;
+        if (registration.error) {
+          let detail = registration.error.message;
+          const context = (registration.error as any).context;
+          if (context && typeof context.json === "function") {
+            try { const payload = await context.json(); detail = payload.error || detail; } catch { /* keep the function error */ }
+          }
+          throw new Error(detail);
         }
-        if (registerMode === "owner") await registerOwnerWithActivationCode(authStoreName.trim(), authActivationCode.trim(), registerPlanCode);
-        else await claimEmployeeActivationCode(authActivationCode.trim());
+        const signedIn = await supabase.auth.signInWithPassword({
+          email: authEmail.trim().toLowerCase(),
+          password: authPassword
+        });
+        if (signedIn.error) throw signedIn.error;
+        if (!signedIn.data.session) throw new Error("Akun dibuat, tetapi sesi login belum terbentuk. Silakan masuk menggunakan email dan password.");
+
         setLoggedIn(true);
         setModal(null);
-        notify("Pendaftaran berhasil. Buat PIN keamanan untuk menyelesaikan aktivasi akun.");
+        setActivationCode(authActivationCode.trim().toUpperCase());
+        setOnboardingStoreName(authStoreName.trim());
+        try {
+          if (registerMode === "owner") await registerOwnerWithActivationCode(authStoreName.trim(), authActivationCode.trim(), registerPlanCode);
+          else await claimEmployeeActivationCode(authActivationCode.trim());
+          setActivationCode("");
+          notify("Akun berhasil dibuat tanpa konfirmasi email. Buat PIN keamanan untuk menyelesaikan aktivasi.");
+        } catch (activationError) {
+          const reason = activationError instanceof Error ? activationError.message : "Kode aktivasi belum berhasil digunakan.";
+          notify("Akun berhasil dibuat tanpa konfirmasi email. Aktivasi perlu dilanjutkan setelah membuat PIN: " + reason);
+        }
         setPinSetupNeeded(true); setPinGate(true); setPinInput(""); setPinConfirm("");
       } else {
         const result = await supabase.auth.signInWithPassword({ email: authEmail.trim().toLowerCase(), password: authPassword });
@@ -351,7 +376,7 @@ function App() {
       <label>{modal === "register" && registerMode === "employee" ? "Email yang didaftarkan owner" : "Email"}<input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} required placeholder="nama@email.com"/></label>
       <label>Password<input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)} required minLength={8} placeholder="Minimal 8 karakter"/></label>
       {modal === "register" && <label>Kode aktivasi<input value={authActivationCode} onChange={e=>setAuthActivationCode(e.target.value.toUpperCase())} required placeholder={registerMode === "owner" ? "Kode paket dari admin" : "Kode anggota dari owner"} autoComplete="off"/></label>}
-      <button className="btn btn-primary btn-full" disabled={busy}>{busy ? "Memproses..." : modal === "login" ? "Masuk" : "Daftar & verifikasi kode"}</button>
+      <button className="btn btn-primary btn-full" disabled={busy}>{busy ? "Memproses..." : modal === "login" ? "Masuk" : "Daftar dengan kode aktivasi"}</button>
       <p className="form-foot">{modal === "login" ? "Login hanya menggunakan email dan password. PIN keamanan diminta setelah password benar." : registerMode === "owner" ? "Kode aktivasi menentukan Free Store atau paket berbayar dan hanya dapat digunakan satu kali." : "Kode anggota terikat ke email, bisnis, cabang, dan peran yang ditentukan owner."}</p>
       <button type="button" className="text-button" onClick={()=>setModal(modal === "login" ? "register" : "login")}>{modal === "login" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}</button>
     </form>}
