@@ -135,15 +135,44 @@ export async function loadAcoWorkspace(userId: string, requestedStoreId?: string
 }
 
 export async function createFreeBusiness(businessName: string, storeName: string) {
+  return registerOwnerWithActivationCode(storeName || businessName, "");
+}
+
+export async function registerOwnerWithActivationCode(storeName: string, activationCode: string) {
   const db = requireClient();
-  const { data, error } = await db.rpc("submit_business_application", {
-    p_business_name: businessName,
+  const { data, error } = await db.rpc("register_owner_with_activation_code", {
     p_store_name: storeName,
-    p_requested_plan: "free",
-    p_applicant_note: null
+    p_activation_code: activationCode
   });
   if (error) throw error;
   return data;
+}
+
+export async function claimEmployeeActivationCode(activationCode: string) {
+  const db = requireClient();
+  const { data, error } = await db.rpc("claim_employee_activation_code", { p_code: activationCode });
+  if (error) throw error;
+  return data;
+}
+
+export async function hasSecurityPin() {
+  const db = requireClient();
+  const { data, error } = await db.rpc("has_security_pin");
+  if (error) throw error;
+  return data === true;
+}
+
+export async function setSecurityPin(pin: string) {
+  const db = requireClient();
+  const { error } = await db.rpc("set_security_pin", { p_pin: pin });
+  if (error) throw error;
+}
+
+export async function verifySecurityPin(pin: string) {
+  const db = requireClient();
+  const { data, error } = await db.rpc("verify_security_pin", { p_pin: pin });
+  if (error) throw error;
+  return data === true;
 }
 
 export async function createProductForStore(input: {
@@ -253,18 +282,15 @@ export async function generateActivationCodes(planCode: string, quantity: number
 
 export async function inviteEmployee(input: { organizationId: string; storeId: string; email: string; role: "manager" | "cashier" | "employee" }) {
   const db = requireClient();
-  const { data: userData, error: userError } = await db.auth.getUser();
-  if (userError) throw userError;
-  if (!userData.user) throw new Error("Sesi login tidak ditemukan.");
-  const { data, error } = await db.from("employee_invites").insert({
-    organization_id: input.organizationId,
-    store_id: input.storeId,
-    email: input.email.trim().toLowerCase(),
-    role: input.role,
-    invited_by: userData.user.id
-  }).select("id,email,role,status").single();
+  const { data, error } = await db.rpc("issue_employee_activation_code", {
+    p_organization_id: input.organizationId,
+    p_store_id: input.storeId,
+    p_email: input.email.trim().toLowerCase(),
+    p_role: input.role,
+    p_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  });
   if (error) throw error;
-  return data;
+  return Array.isArray(data) ? data[0] : data;
 }
 
 export async function markAttendance(input: { organizationId: string; storeId: string; existingId?: string | null }) {
