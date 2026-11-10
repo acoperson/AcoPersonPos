@@ -184,7 +184,7 @@ function App() {
         if (result.error) throw result.error;
         if (modal === "register") {
           if (result.data.session) { setLoggedIn(true); notify("Akun berhasil dibuat. Lanjutkan pengaturan bisnis."); window.setTimeout(() => void refreshWorkspace(), 0); }
-          else notify("Akun dibuat. Jika konfirmasi email masih aktif di Supabase, silakan verifikasi lalu masuk.");
+          else notify("Akun tersimpan, tetapi login langsung belum aktif. Pengaturan Confirm email di Supabase Auth harus dinonaktifkan agar akun dapat langsung digunakan.");
         } else { setLoggedIn(true); notify("Berhasil masuk ke acoPos."); window.setTimeout(() => void refreshWorkspace(), 0); }
       } else {
         if (!authEmail || authPassword.length < 6) throw new Error("Masukkan email dan password minimal 6 karakter.");
