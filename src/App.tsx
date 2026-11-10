@@ -8,7 +8,7 @@ import {
   Store, Ticket, TrendingUp, Users, Wallet, X, Zap
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
-import { loadAcoWorkspace, createFreeBusiness, registerOwnerWithActivationCode, claimEmployeeActivationCode, hasSecurityPin, setSecurityPin, verifySecurityPin, createProductForStore, completeSale, redeemBusinessActivation, generateActivationCodes, getPlatformOverview, inviteEmployee, markAttendance, createCustomer, createCustomerTab, recordCustomerTabPayment, createReservation, updateReservationStatus, adjustStoreStock, getPublicStoreCatalog, submitPublicQrOrder, getPublicOrderQueue, createStore, reviewQrPayment, updateQrOrderStatus, assignEmployeeStore, uploadPublicPaymentProof, createPaymentProofSignedUrl } from "./lib/acopos";
+import { loadAcoWorkspace, registerOwnerWithActivationCode, claimEmployeeActivationCode, hasSecurityPin, setSecurityPin, verifySecurityPin, createProductForStore, completeSale, redeemBusinessActivation, generateActivationCodes, getPlatformOverview, inviteEmployee, markAttendance, createCustomer, createCustomerTab, recordCustomerTabPayment, createReservation, updateReservationStatus, adjustStoreStock, getPublicStoreCatalog, submitPublicQrOrder, getPublicOrderQueue, createStore, reviewQrPayment, updateQrOrderStatus, assignEmployeeStore, uploadPublicPaymentProof, createPaymentProofSignedUrl } from "./lib/acopos";
 
 type View = "business" | "overview" | "onboarding" | "admin" | "pos" | "products" | "orders" | "branches" | "employees" | "attendance" | "kasbon" | "reservations" | "reports" | "qr" | "members" | "settings" | "activation";
 type Product = { id: string | number; name: string; category: string; price: number; stock: number; sku: string };
@@ -167,8 +167,7 @@ function App() {
       if (alive && data.session) window.setTimeout(() => { if (alive) void beginPinChallenge(); }, 0);
     });
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) window.setTimeout(() => { if (alive) void beginPinChallenge(); }, 0);
-      else {
+      if (!session) {
         setLoggedIn(false);
         setPinGate(false); setPinSetupNeeded(false); setPinInput(""); setPinConfirm("");
         setActiveOrgId(null); setActiveStoreId(null); setStores([]); setEmployees([]);
