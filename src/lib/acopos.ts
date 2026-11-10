@@ -134,10 +134,6 @@ export async function loadAcoWorkspace(userId: string, requestedStoreId?: string
   };
 }
 
-export async function createFreeBusiness(businessName: string, storeName: string) {
-  return registerOwnerWithActivationCode(storeName || businessName, "");
-}
-
 export async function registerOwnerWithActivationCode(storeName: string, activationCode: string, expectedPlanCode: string) {
   const db = requireClient();
   const { data, error } = await db.rpc("register_owner_with_activation_code", {
